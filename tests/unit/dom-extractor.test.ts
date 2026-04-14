@@ -1,29 +1,34 @@
 import { describe, expect, it } from "vitest";
-import { extractSegmentsFromHtml } from "../../src/content/dom-extractor";
+import { extractSegments } from "../../src/content/dom-extractor";
 
-describe("extractSegmentsFromHtml", () => {
+describe("extractSegments", () => {
   it("skips code blocks", () => {
-    const segments = extractSegmentsFromHtml("<p>Hello</p><code>const a=1</code>");
+    document.body.innerHTML = "<p>Hello</p><code>const a=1</code>";
+    const segments = extractSegments();
     expect(segments.map((s) => s.text)).toEqual(["Hello"]);
   });
 
   it("skips pre blocks", () => {
-    const segments = extractSegmentsFromHtml("<p>Hello</p><pre>code block</pre>");
+    document.body.innerHTML = "<p>Hello</p><pre>code block</pre>";
+    const segments = extractSegments();
     expect(segments.map((s) => s.text)).toEqual(["Hello"]);
   });
 
   it("skips script blocks", () => {
-    const segments = extractSegmentsFromHtml("<p>Hello</p><script>console.log('hi')</script>");
+    document.body.innerHTML = "<p>Hello</p><script>console.log('hi')</script>";
+    const segments = extractSegments();
     expect(segments.map((s) => s.text)).toEqual(["Hello"]);
   });
 
   it("skips style blocks", () => {
-    const segments = extractSegmentsFromHtml("<p>Hello</p><style>body { color: red }</style>");
+    document.body.innerHTML = "<p>Hello</p><style>body { color: red }</style>";
+    const segments = extractSegments();
     expect(segments.map((s) => s.text)).toEqual(["Hello"]);
   });
 
   it("skips elements with translate=no", () => {
-    const segments = extractSegmentsFromHtml('<p>Hello</p><div translate="no">Do not translate</div>');
+    document.body.innerHTML = '<p>Hello</p><div translate="no">Do not translate</div>';
+    const segments = extractSegments();
     expect(segments.map((s) => s.text)).toEqual(["Hello"]);
   });
 });

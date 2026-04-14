@@ -1,3 +1,5 @@
+import type { Segment } from "./dom-extractor";
+
 type Status = "pending" | "running" | "done" | "failed";
 
 const STATUS_COLOR: Record<Status, string> = {
@@ -7,23 +9,62 @@ const STATUS_COLOR: Record<Status, string> = {
   failed: "#dc2626"
 };
 
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
+export function renderTranslationBlock(
+  segment: Segment,
+  translated: string,
+  status: Status = "done"
+): void {
+  const element = segment.element;
+  if (!element) return;
 
-export function renderTranslationBlock(source: string, translated: string, status: Status): string {
   const color = STATUS_COLOR[status];
-  return `
-    <div class="wpt-segment">
-      <p class="wpt-source">${escapeHtml(source)}</p>
-      <p class="wpt-translated" style="border-left:4px solid ${color};padding-left:10px;">${escapeHtml(translated)}</p>
-      <hr style="border-top:1px dashed #999;" />
-    </div>
-  `.trim();
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "wpt-segment";
+  wrapper.setAttribute("data-wpt-id", segment.segmentId);
+
+  const sourceP = document.createElement("p");
+  sourceP.className = "wpt-source";
+  sourceP.textContent = segment.text;
+
+  const translatedP = document.createElement("p");
+  translatedP.className = "wpt-translated";
+  translatedP.style.borderLeft = `4px solid ${color}`;
+  translatedP.style.paddingLeft = "10px";
+  translatedP.style.marginTop = "8px";
+  translatedP.textContent = translated || (status === "failed" ? "[翻译失败]" : "");
+
+  const hr = document.createElement("hr");
+  hr.style.borderTop = "1px dashed #999";
+  hr.style.marginTop = "12px";
+
+  wrapper.appendChild(sourceP);
+  wrapper.appendChild(translatedP);
+  wrapper.appendChild(hr);
+
+  element.insertAdjacentElement("afterend", wrapper);
+  element.setAttribute("data-wpt-translated", "true");
 }
 
+export function updateSegmentStatus(
+  segmentId: string,
+  status: Status,
+  translated?: string
+): void {
+  const wrapper = document.querySelector(`[data-wpt-id="${segmentId}"]`);
+  if (!wrapper) return;
 
+  const translatedP = wrapper.querySelector(".wpt-translated") as HTMLElement;
+  if (!translatedP) return;
+
+  const color = STATUS_COLOR[status];
+  translatedP.style.borderLeft = `4px solid ${color}`;
+
+  if (translated) {
+    translatedP.textContent = translated;
+  }
+
+  if (status === "failed") {
+    translatedP.textContent = "[翻译失败]";
+  }
+}
