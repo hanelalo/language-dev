@@ -2,8 +2,6 @@ import { handleTranslateBatch } from "./messages";
 import { registerEngine, getEngine, listEngines } from "./engine-registry";
 import { createDeepLEngine } from "./engines/deepl-engine";
 import { createOpenAIEngine } from "./engines/openai-engine";
-import { DEFAULT_SETTINGS } from "../shared/storage-schema";
-
 // Register default engines
 registerEngine(createDeepLEngine(""));
 registerEngine(createOpenAIEngine(""));
