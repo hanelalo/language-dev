@@ -222,6 +222,26 @@ export function PopupApp() {
         {status === "error" && errorMsg && (
           <p style={{ marginTop: 8, fontSize: 12, color: colors.error, textAlign: "center" }}>{errorMsg}</p>
         )}
+        {status === "done" && progress.failed > 0 && (
+          <button
+            type="button"
+            onClick={handleTranslate}
+            style={{
+              marginTop: 12,
+              width: "100%",
+              padding: "10px 16px",
+              fontSize: 13,
+              fontWeight: 500,
+              color: colors.primary,
+              background: colors.primaryLight,
+              border: `1px solid ${colors.primary}30`,
+              borderRadius: 8,
+              cursor: "pointer",
+            }}
+          >
+            重试失败的 {progress.failed} 段
+          </button>
+        )}
       </div>
 
       <footer style={styles.footer}>
