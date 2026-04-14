@@ -33,6 +33,9 @@ export function OptionsApp() {
   const [deeplPlan, setDeeplPlan] = useState<"free" | "pro">("pro");
   const [openaiKey, setOpenaiKey] = useState("");
   const [openaiModel, setOpenaiModel] = useState("gpt-4o");
+  const [customKey, setCustomKey] = useState("");
+  const [customModel, setCustomModel] = useState("gpt-4o");
+  const [customBaseUrl, setCustomBaseUrl] = useState("");
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -40,16 +43,20 @@ export function OptionsApp() {
   useEffect(() => {
     async function loadConfig() {
       setLoading(true);
-      const [loadedSettings, deeplConfig, openaiConfig] = await Promise.all([
+      const [loadedSettings, deeplConfig, openaiConfig, customConfig] = await Promise.all([
         getSettings(),
         getEngineConfig("deepl"),
         getEngineConfig("openai"),
+        getEngineConfig("custom-llm"),
       ]);
       setSettings(loadedSettings);
       if (deeplConfig.apiKey) setDeeplKey(deeplConfig.apiKey);
       if (deeplConfig.plan) setDeeplPlan(deeplConfig.plan as "free" | "pro");
       if (openaiConfig.apiKey) setOpenaiKey(openaiConfig.apiKey);
       if (openaiConfig.model) setOpenaiModel(openaiConfig.model);
+      if (customConfig.apiKey) setCustomKey(customConfig.apiKey);
+      if (customConfig.model) setCustomModel(customConfig.model);
+      if (customConfig.baseUrl) setCustomBaseUrl(customConfig.baseUrl);
       setLoading(false);
     }
     loadConfig();
@@ -60,6 +67,7 @@ export function OptionsApp() {
       saveSettings(settings),
       saveEngineConfig("deepl", { apiKey: deeplKey, plan: deeplPlan }),
       saveEngineConfig("openai", { apiKey: openaiKey, model: openaiModel }),
+      saveEngineConfig("custom-llm", { apiKey: customKey, model: customModel, baseUrl: customBaseUrl }),
     ]);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -280,6 +288,43 @@ export function OptionsApp() {
             <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
           </select>
         </div>
+
+        <div style={{ ...styles.field, marginTop: 24, paddingTop: 16, borderTop: `1px dashed ${colors.border}` }}>
+          <label style={{ ...styles.label, color: colors.primary, fontWeight: 600 }}>自定义 LLM API（OpenAI 兼容）</label>
+        </div>
+
+        <div style={styles.field}>
+          <label style={styles.label}>API 地址</label>
+          <input
+            type="text"
+            value={customBaseUrl}
+            onChange={(e) => setCustomBaseUrl(e.target.value)}
+            placeholder="https://api.example.com/v1"
+            style={styles.input}
+          />
+        </div>
+
+        <div style={styles.field}>
+          <label style={styles.label}>自定义 API Key</label>
+          <input
+            type="password"
+            value={customKey}
+            onChange={(e) => setCustomKey(e.target.value)}
+            placeholder="输入自定义 API Key"
+            style={styles.input}
+          />
+        </div>
+
+        <div style={styles.field}>
+          <label style={styles.label}>自定义模型</label>
+          <input
+            type="text"
+            value={customModel}
+            onChange={(e) => setCustomModel(e.target.value)}
+            placeholder="gpt-4o / claude-3-5-sonnet-latest 等"
+            style={styles.input}
+          />
+        </div>
       </section>
 
       {/* 翻译设置 */}
@@ -292,8 +337,21 @@ export function OptionsApp() {
             <line x1="16" y1="17" x2="8" y2="17"/>
             <line x1="10" y1="9" x2="8" y2="9"/>
           </svg>
-          领域 Prompt
+          翻译设置
         </h2>
+
+        <div style={styles.field}>
+          <label style={styles.label}>默认引擎</label>
+          <select
+            value={settings.defaultEngine}
+            onChange={(e) => setSettings({ ...settings, defaultEngine: e.target.value })}
+            style={styles.select}
+          >
+            <option value="deepl">DeepL</option>
+            <option value="openai">OpenAI</option>
+            <option value="custom-llm">自定义 LLM</option>
+          </select>
+        </div>
 
         <div style={styles.field}>
           <label style={styles.label}>目标语言</label>
