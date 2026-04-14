@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { DEFAULT_SETTINGS, type Settings } from "../shared/storage-schema";
-import { getSettings, saveSettings, getEngineConfig, saveEngineConfig } from "../background/config-store";
+import { getSettings, saveSettings, getEngineConfig, saveEngineConfig, getCustomApis, saveCustomApi, deleteCustomApi, getDomains, saveDomain, deleteDomain, type CustomLLMConfig, type Domain } from "../background/config-store";
 
-// 内置领域
-const BUILTIN_DOMAINS = [
-  { id: "it", name: "IT/技术", prompt: "你是专业 IT 技术文档翻译专家，保持术语一致并保留缩写。" },
-  { id: "legal", name: "法律", prompt: "使用正式法律语言，保持条款与术语精确对应。" },
-  { id: "medical", name: "医学", prompt: "使用规范医学术语，避免口语化表达。" },
-  { id: "finance", name: "金融", prompt: "保留金融专有名词，强调数值与单位准确性。" },
-  { id: "gaming", name: "游戏", prompt: "保留游戏语境和术语，语气自然且可读。" },
-  { id: "literature", name: "文学", prompt: "优先保留文风和修辞，同时确保语义忠实。" },
+// 内置领域定义（必须与 config-store 保持一致）
+const BUILTIN_DOMAINS: Domain[] = [
+  { id: "it", name: "IT/技术", prompt: "你是专业 IT 技术文档翻译专家，保持术语一致并保留缩写。", builtin: true },
+  { id: "legal", name: "法律", prompt: "使用正式法律语言，保持条款与术语精确对应。", builtin: true },
+  { id: "medical", name: "医学", prompt: "使用规范医学术语，避免口语化表达。", builtin: true },
+  { id: "finance", name: "金融", prompt: "保留金融专有名词，强调数值与单位准确性。", builtin: true },
+  { id: "gaming", name: "游戏", prompt: "保留游戏语境和术语，语气自然且可读。", builtin: true },
+  { id: "literature", name: "文学", prompt: "优先保留文风和修辞，同时确保语义忠实。", builtin: true },
 ];
 
 // 清新自然风格配色
@@ -33,9 +33,12 @@ export function OptionsApp() {
   const [deeplPlan, setDeeplPlan] = useState<"free" | "pro">("pro");
   const [openaiKey, setOpenaiKey] = useState("");
   const [openaiModel, setOpenaiModel] = useState("gpt-4o");
-  const [customKey, setCustomKey] = useState("");
-  const [customModel, setCustomModel] = useState("gpt-4o");
-  const [customBaseUrl, setCustomBaseUrl] = useState("");
+  const [customApis, setCustomApis] = useState<CustomLLMConfig[]>([]);
+  const [editingApi, setEditingApi] = useState<CustomLLMConfig | null>(null);
+  const [showApiDialog, setShowApiDialog] = useState(false);
+  const [domains, setDomains] = useState<Domain[]>([]);
+  const [editingDomain, setEditingDomain] = useState<Domain | null>(null);
+  const [showDomainDialog, setShowDomainDialog] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -43,20 +46,20 @@ export function OptionsApp() {
   useEffect(() => {
     async function loadConfig() {
       setLoading(true);
-      const [loadedSettings, deeplConfig, openaiConfig, customConfig] = await Promise.all([
+      const [loadedSettings, deeplConfig, openaiConfig, loadedCustomApis, loadedDomains] = await Promise.all([
         getSettings(),
         getEngineConfig("deepl"),
         getEngineConfig("openai"),
-        getEngineConfig("custom-llm"),
+        getCustomApis(),
+        getDomains(),
       ]);
       setSettings(loadedSettings);
       if (deeplConfig.apiKey) setDeeplKey(deeplConfig.apiKey);
       if (deeplConfig.plan) setDeeplPlan(deeplConfig.plan as "free" | "pro");
       if (openaiConfig.apiKey) setOpenaiKey(openaiConfig.apiKey);
       if (openaiConfig.model) setOpenaiModel(openaiConfig.model);
-      if (customConfig.apiKey) setCustomKey(customConfig.apiKey);
-      if (customConfig.model) setCustomModel(customConfig.model);
-      if (customConfig.baseUrl) setCustomBaseUrl(customConfig.baseUrl);
+      setCustomApis(loadedCustomApis);
+      setDomains(loadedDomains.length > 0 ? loadedDomains : BUILTIN_DOMAINS);
       setLoading(false);
     }
     loadConfig();
@@ -67,11 +70,62 @@ export function OptionsApp() {
       saveSettings(settings),
       saveEngineConfig("deepl", { apiKey: deeplKey, plan: deeplPlan }),
       saveEngineConfig("openai", { apiKey: openaiKey, model: openaiModel }),
-      saveEngineConfig("custom-llm", { apiKey: customKey, model: customModel, baseUrl: customBaseUrl }),
     ]);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
+
+  const handleSaveApi = async () => {
+    if (!editingApi) return;
+    await saveCustomApi(editingApi);
+    const updated = await getCustomApis();
+    setCustomApis(updated);
+    setShowApiDialog(false);
+    setEditingApi(null);
+  };
+
+  const handleDeleteApi = async (name: string) => {
+    await deleteCustomApi(name);
+    const updated = await getCustomApis();
+    setCustomApis(updated);
+  };
+
+  const openAddApi = () => {
+    setEditingApi({ name: "", apiKey: "", baseUrl: "", model: "gpt-4o" });
+    setShowApiDialog(true);
+  };
+
+  const openEditApi = (api: CustomLLMConfig) => {
+    setEditingApi({ ...api });
+    setShowApiDialog(true);
+  };
+
+  const handleSaveDomain = async () => {
+    if (!editingDomain) return;
+    await saveDomain(editingDomain);
+    const updated = await getDomains();
+    setDomains(updated);
+    setShowDomainDialog(false);
+    setEditingDomain(null);
+  };
+
+  const handleDeleteDomain = async (id: string) => {
+    await deleteDomain(id);
+    const updated = await getDomains();
+    setDomains(updated);
+  };
+
+  const openAddDomain = () => {
+    setEditingDomain({ id: `custom-${Date.now()}`, name: "", prompt: "" });
+    setShowDomainDialog(true);
+  };
+
+  const openEditDomain = (domain: Domain) => {
+    setEditingDomain({ ...domain });
+    setShowDomainDialog(true);
+  };
+
+  const allDomains = [...BUILTIN_DOMAINS, ...domains.filter(d => !d.builtin)];
 
   const styles: Record<string, React.CSSProperties> = {
     container: {
@@ -293,39 +347,104 @@ export function OptionsApp() {
           <label style={{ ...styles.label, color: colors.primary, fontWeight: 600 }}>自定义 LLM API（OpenAI 兼容）</label>
         </div>
 
-        <div style={styles.field}>
-          <label style={styles.label}>API 地址</label>
-          <input
-            type="text"
-            value={customBaseUrl}
-            onChange={(e) => setCustomBaseUrl(e.target.value)}
-            placeholder="https://api.example.com/v1"
-            style={styles.input}
-          />
-        </div>
+        {customApis.length > 0 && (
+          <div style={styles.field}>
+            {customApis.map((api) => (
+              <div key={api.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${colors.border}` }}>
+                <div>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{api.name}</div>
+                  <div style={{ fontSize: 12, color: colors.textSecondary }}>{api.baseUrl} · {api.model}</div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    onClick={() => openEditApi(api)}
+                    style={{ padding: "6px 12px", fontSize: 12, cursor: "pointer", background: colors.inputBg, border: `1px solid ${colors.border}`, borderRadius: 6 }}
+                  >
+                    编辑
+                  </button>
+                  <button
+                    onClick={() => handleDeleteApi(api.name)}
+                    style={{ padding: "6px 12px", fontSize: 12, cursor: "pointer", background: "#FEE2E2", border: "1px solid #FECACA", borderRadius: 6, color: "#DC2626" }}
+                  >
+                    删除
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
-        <div style={styles.field}>
-          <label style={styles.label}>自定义 API Key</label>
-          <input
-            type="password"
-            value={customKey}
-            onChange={(e) => setCustomKey(e.target.value)}
-            placeholder="输入自定义 API Key"
-            style={styles.input}
-          />
-        </div>
-
-        <div style={styles.field}>
-          <label style={styles.label}>自定义模型</label>
-          <input
-            type="text"
-            value={customModel}
-            onChange={(e) => setCustomModel(e.target.value)}
-            placeholder="gpt-4o / claude-3-5-sonnet-latest 等"
-            style={styles.input}
-          />
-        </div>
+        <button
+          onClick={openAddApi}
+          style={{ marginTop: 12, padding: "10px 16px", fontSize: 13, cursor: "pointer", background: colors.primaryLight, border: `1px solid ${colors.primary}40`, borderRadius: 8, color: colors.primary, fontWeight: 500 }}
+        >
+          + 添加自定义 API
+        </button>
       </section>
+
+      {/* 自定义 API 编辑弹窗 */}
+      {showApiDialog && editingApi && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+          <div style={{ background: colors.card, borderRadius: 16, padding: 24, width: 400, maxWidth: "90vw", boxShadow: "0 4px 24px rgba(0,0,0,0.15)" }}>
+            <h3 style={{ margin: "0 0 20px 0", fontSize: 16, fontWeight: 600 }}>{editingApi.name ? "编辑自定义 API" : "添加自定义 API"}</h3>
+            <div style={styles.field}>
+              <label style={styles.label}>名称</label>
+              <input
+                type="text"
+                value={editingApi.name}
+                onChange={(e) => setEditingApi({ ...editingApi, name: e.target.value })}
+                placeholder="例如：My Claude"
+                style={styles.input}
+              />
+            </div>
+            <div style={styles.field}>
+              <label style={styles.label}>API 地址</label>
+              <input
+                type="text"
+                value={editingApi.baseUrl}
+                onChange={(e) => setEditingApi({ ...editingApi, baseUrl: e.target.value })}
+                placeholder="https://api.example.com/v1"
+                style={styles.input}
+              />
+            </div>
+            <div style={styles.field}>
+              <label style={styles.label}>API Key</label>
+              <input
+                type="password"
+                value={editingApi.apiKey}
+                onChange={(e) => setEditingApi({ ...editingApi, apiKey: e.target.value })}
+                placeholder="输入 API Key"
+                style={styles.input}
+              />
+            </div>
+            <div style={styles.field}>
+              <label style={styles.label}>模型</label>
+              <input
+                type="text"
+                value={editingApi.model}
+                onChange={(e) => setEditingApi({ ...editingApi, model: e.target.value })}
+                placeholder="gpt-4o / claude-3-5-sonnet-latest 等"
+                style={styles.input}
+              />
+            </div>
+            <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
+              <button
+                onClick={() => { setShowApiDialog(false); setEditingApi(null); }}
+                style={{ flex: 1, padding: "12px", fontSize: 14, cursor: "pointer", background: colors.inputBg, border: `1px solid ${colors.border}`, borderRadius: 8 }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSaveApi}
+                disabled={!editingApi.name || !editingApi.baseUrl}
+                style={{ flex: 1, padding: "12px", fontSize: 14, cursor: editingApi.name && editingApi.baseUrl ? "pointer" : "not-allowed", background: editingApi.name && editingApi.baseUrl ? colors.primary : colors.border, border: "none", borderRadius: 8, color: editingApi.name && editingApi.baseUrl ? "#fff" : colors.textSecondary }}
+              >
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 翻译设置 */}
       <section style={styles.section}>
@@ -349,7 +468,9 @@ export function OptionsApp() {
           >
             <option value="deepl">DeepL</option>
             <option value="openai">OpenAI</option>
-            <option value="custom-llm">自定义 LLM</option>
+            {customApis.map((api) => (
+              <option key={api.name} value={`custom-llm-${api.name}`}>{api.name}</option>
+            ))}
           </select>
         </div>
 
@@ -379,7 +500,7 @@ export function OptionsApp() {
             style={styles.select}
           >
             <option value="">不使用领域 Prompt</option>
-            {BUILTIN_DOMAINS.map((d) => (
+            {allDomains.map((d) => (
               <option key={d.id} value={d.id}>{d.name}</option>
             ))}
           </select>
@@ -387,13 +508,116 @@ export function OptionsApp() {
 
         {settings.currentDomain && (
           <div style={styles.promptBox}>
-            <p style={styles.promptLabel}>领域 Prompt 预览</p>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <p style={styles.promptLabel}>领域 Prompt 预览</p>
+              <button
+                onClick={() => openEditDomain(allDomains.find(d => d.id === settings.currentDomain)!)}
+                style={{ padding: "4px 10px", fontSize: 11, cursor: "pointer", background: colors.card, border: `1px solid ${colors.primary}40`, borderRadius: 4, color: colors.primary }}
+              >
+                编辑
+              </button>
+            </div>
             <p style={styles.promptText}>
-              {BUILTIN_DOMAINS.find((d) => d.id === settings.currentDomain)?.prompt || ""}
+              {allDomains.find((d) => d.id === settings.currentDomain)?.prompt || ""}
             </p>
           </div>
         )}
+
+        <div style={{ marginTop: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <label style={styles.label}>系统提示词模板</label>
+            <span style={{ fontSize: 11, color: colors.textSecondary }}>支持 {"{{target_lang}}"}, {"{{source_lang}}"}</span>
+          </div>
+          <textarea
+            value={settings.systemPrompt || ""}
+            onChange={(e) => setSettings({ ...settings, systemPrompt: e.target.value })}
+            placeholder={"You are a professional translator. Translate the following text to {{target_lang}}.\n\nRequirements:\n- Maintain the original tone and style\n- Preserve technical terms and abbreviations"}
+            style={{ ...styles.input, minHeight: 100, resize: "vertical" as const }}
+          />
+          <p style={{ fontSize: 11, color: colors.textSecondary, marginTop: 4 }}>
+            {settings.systemPrompt ? "已设置自定义提示词模板" : "使用默认提示词模板"}
+          </p>
+        </div>
+
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px dashed ${colors.border}` }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <label style={{ ...styles.label, marginBottom: 0, color: colors.primary, fontWeight: 600 }}>领域管理</label>
+            <button
+              onClick={openAddDomain}
+              style={{ padding: "6px 12px", fontSize: 12, cursor: "pointer", background: colors.primaryLight, border: `1px solid ${colors.primary}40`, borderRadius: 6, color: colors.primary, fontWeight: 500 }}
+            >
+              + 添加领域
+            </button>
+          </div>
+          {allDomains.map((domain) => (
+            <div key={domain.id} style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${colors.border}` }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 500, fontSize: 14 }}>{domain.name}{domain.builtin && " ★"}</div>
+                <div style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>{domain.prompt.substring(0, 60)}{domain.prompt.length > 60 ? "..." : ""}</div>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginLeft: 12 }}>
+                <button
+                  onClick={() => openEditDomain(domain)}
+                  style={{ padding: "6px 12px", fontSize: 12, cursor: "pointer", background: colors.inputBg, border: `1px solid ${colors.border}`, borderRadius: 6 }}
+                >
+                  编辑
+                </button>
+                {!domain.builtin && (
+                  <button
+                    onClick={() => handleDeleteDomain(domain.id)}
+                    style={{ padding: "6px 12px", fontSize: 12, cursor: "pointer", background: "#FEE2E2", border: "1px solid #FECACA", borderRadius: 6, color: "#DC2626" }}
+                  >
+                    删除
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
+
+      {/* 领域编辑弹窗 */}
+      {showDomainDialog && editingDomain && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+          <div style={{ background: colors.card, borderRadius: 16, padding: 24, width: 480, maxWidth: "90vw", boxShadow: "0 4px 24px rgba(0,0,0,0.15)" }}>
+            <h3 style={{ margin: "0 0 20px 0", fontSize: 16, fontWeight: 600 }}>{editingDomain.name ? "编辑领域" : "添加领域"}</h3>
+            <div style={styles.field}>
+              <label style={styles.label}>领域名称</label>
+              <input
+                type="text"
+                value={editingDomain.name}
+                onChange={(e) => setEditingDomain({ ...editingDomain, name: e.target.value })}
+                placeholder="例如：IT/技术"
+                style={styles.input}
+              />
+            </div>
+            <div style={styles.field}>
+              <label style={styles.label}>系统提示词</label>
+              <textarea
+                value={editingDomain.prompt}
+                onChange={(e) => setEditingDomain({ ...editingDomain, prompt: e.target.value })}
+                placeholder="输入领域专用的系统提示词，用于指导翻译风格和术语..."
+                style={{ ...styles.input, minHeight: 120, resize: "vertical" as const }}
+              />
+            </div>
+            <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
+              <button
+                onClick={() => { setShowDomainDialog(false); setEditingDomain(null); }}
+                style={{ flex: 1, padding: "12px", fontSize: 14, cursor: "pointer", background: colors.inputBg, border: `1px solid ${colors.border}`, borderRadius: 8 }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSaveDomain}
+                disabled={!editingDomain.name || !editingDomain.prompt}
+                style={{ flex: 1, padding: "12px", fontSize: 14, cursor: editingDomain.name && editingDomain.prompt ? "pointer" : "not-allowed", background: editingDomain.name && editingDomain.prompt ? colors.primary : colors.border, border: "none", borderRadius: 8, color: editingDomain.name && editingDomain.prompt ? "#fff" : colors.textSecondary }}
+              >
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 保存按钮 */}
       <div style={styles.actions}>

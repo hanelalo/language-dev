@@ -1,9 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
-  <rect width="16" height="16" rx="2" fill="#7c3aed"/>
-  <rect x="3" y="2" width="8" height="10" rx="1" fill="white"/>
-  <path d="M8 2 L11 2 L11 5 L8 2 Z" fill="#e2e8f0"/>
-  <rect x="4" y="4" width="4" height="1" rx="0.5" fill="#94a3b8"/>
-  <rect x="4" y="6" width="5" height="1" rx="0.5" fill="#cbd5e1"/>
-  <rect x="4" y="8" width="3" height="1" rx="0.5" fill="#cbd5e1"/>
-  <text x="12" y="14" font-family="sans-serif" font-size="6" font-weight="bold" fill="white" text-anchor="middle">译</text>
-</svg>
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10B981"/>
+      <stop offset="100

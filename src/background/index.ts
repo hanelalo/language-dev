@@ -3,13 +3,12 @@ import { registerEngine, getEngine, listEngines } from "./engine-registry";
 import { createDeepLEngine } from "./engines/deepl-engine";
 import { createOpenAIEngine } from "./engines/openai-engine";
 import { createCustomLLMEngine } from "./engines/custom-llm-engine";
-import { getSettings, getEngineConfig } from "./config-store";
+import { getSettings, getEngineConfig, getCustomApis } from "./config-store";
 import { MESSAGE_TYPES } from "../shared/constants";
 
 // Register default engines (without API keys initially)
 registerEngine(createDeepLEngine(""));
 registerEngine(createOpenAIEngine(""));
-registerEngine(createCustomLLMEngine("", "", ""));
 
 // Load API keys from storage and update engines
 async function initializeEngines() {
@@ -21,13 +20,13 @@ async function initializeEngines() {
   if (openaiConfig.apiKey) {
     registerEngine(createOpenAIEngine(openaiConfig.apiKey, openaiConfig.model ?? "gpt-4o"));
   }
-  const customLLMConfig = await getEngineConfig("custom-llm");
-  if (customLLMConfig.apiKey && customLLMConfig.baseUrl) {
-    registerEngine(createCustomLLMEngine(
-      customLLMConfig.apiKey,
-      customLLMConfig.model ?? "gpt-4o",
-      customLLMConfig.baseUrl
-    ));
+
+  // Load and register all custom APIs
+  const customApis = await getCustomApis();
+  for (const api of customApis) {
+    if (api.apiKey && api.baseUrl) {
+      registerEngine(createCustomLLMEngine(api.name, api.apiKey, api.model, api.baseUrl));
+    }
   }
 }
 

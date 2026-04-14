@@ -11,6 +11,7 @@ export default defineConfig({
     emptyOutDir: true
   },
   test: {
-    environment: "jsdom"
+    environment: "jsdom",
+    setupFiles: ["./tests/setup.ts"]
   }
 });

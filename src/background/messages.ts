@@ -1,4 +1,4 @@
-import { getSettings, getEngineConfig, getDomainPrompt } from "./config-store";
+import { getSettings, getDomainPrompt } from "./config-store";
 import { getEngine } from "./engine-registry";
 import { runBatchTranslateWithRetry } from "./translation-orchestrator";
 import type { SegmentResult } from "./translation-orchestrator";
@@ -46,9 +46,12 @@ export async function handleTranslateBatch(
     domainPrompt = await getDomainPrompt(settings.currentDomain) ?? undefined;
   }
 
+  // Get system prompt template from settings
+  const systemPrompt = settings.systemPrompt;
+
   const worker = async (text: string): Promise<string> => {
     if (engine.type === "llm") {
-      return engine.translate(text, sourceLang, targetLang, { domainPrompt });
+      return engine.translate(text, sourceLang, targetLang, { systemPrompt, domainPrompt });
     }
     return engine.translate(text, sourceLang, targetLang);
   };

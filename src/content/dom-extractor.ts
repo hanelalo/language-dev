@@ -4,39 +4,94 @@ export type Segment = {
   xpath: string;
   order: number;
   element?: Element;
+  node?: Text;
+  renderMode: "append" | "replace";
 };
 
-const TARGET_TAGS = ["p", "div", "span", "li", "td", "h1", "h2", "h3", "h4", "h5", "h6", "a"];
-const SKIP_TAGS = new Set(["CODE", "PRE", "SCRIPT", "STYLE", "INPUT", "TEXTAREA"]);
 const SKIP_SELECTORS = 'code,pre,script,style,input,textarea,[translate="no"]';
+const APPEND_TAGS = new Set([
+  "P",
+  "LI",
+  "TD",
+  "TH",
+  "H1",
+  "H2",
+  "H3",
+  "H4",
+  "H5",
+  "H6",
+  "BLOCKQUOTE",
+  "FIGCAPTION"
+]);
+const INTERACTIVE_SELECTORS = "a,button,nav,[role='button'],label,summary,select,option";
+const translatedNodes = new WeakSet<Text>();
+const translatedElements = new WeakSet<Element>();
 
 export function extractSegments(): Segment[] {
   const result: Segment[] = [];
-  const nodes = document.body.querySelectorAll(TARGET_TAGS.join(","));
   let idx = 0;
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  const appendedElementsInPass = new WeakSet<Element>();
+  let current = walker.nextNode();
 
-  for (const node of nodes) {
-    if (SKIP_TAGS.has(node.tagName)) continue;
-    if (node.closest(SKIP_SELECTORS)) continue;
+  while (current) {
+    const textNode = current as Text;
+    const parent = textNode.parentElement;
+    current = walker.nextNode();
 
-    const text = node.textContent?.trim() ?? "";
+    if (!parent) continue;
+    if (parent.closest(SKIP_SELECTORS)) continue;
+    if (translatedNodes.has(textNode)) continue;
+
+    const text = textNode.nodeValue?.trim() ?? "";
     if (!text || text.length < 2) continue;
 
-    const xpath = getXPath(node);
+    const appendContainer = findAppendContainer(parent);
+    if (appendContainer) {
+      if (translatedElements.has(appendContainer) || appendedElementsInPass.has(appendContainer)) {
+        continue;
+      }
 
-    if (node.closest("[data-wpt-translated]")) continue;
+      const blockText = appendContainer.textContent?.trim() ?? "";
+      if (blockText.length >= 2) {
+        result.push({
+          segmentId: `wpt-seg-${idx}`,
+          text: blockText,
+          xpath: getXPath(appendContainer),
+          order: idx,
+          element: appendContainer,
+          renderMode: "append"
+        });
+        idx++;
+        appendedElementsInPass.add(appendContainer);
+      }
+      continue;
+    }
 
     result.push({
       segmentId: `wpt-seg-${idx}`,
       text,
-      xpath,
+      xpath: getTextNodeXPath(textNode),
       order: idx,
-      element: node,
+      element: parent,
+      node: textNode,
+      renderMode: "replace"
     });
     idx++;
   }
 
   return result;
+}
+
+export function markSegmentTranslated(segment: Segment): void {
+  if (segment.renderMode === "append" && segment.element) {
+    translatedElements.add(segment.element);
+    return;
+  }
+
+  if (segment.renderMode === "replace" && segment.node) {
+    translatedNodes.add(segment.node);
+  }
 }
 
 function getXPath(element: Element): string {
@@ -52,4 +107,22 @@ function getXPath(element: Element): string {
 
   const index = siblings.indexOf(element) + 1;
   return `${getXPath(element.parentElement)}/${element.tagName.toLowerCase()}[${index}]`;
+}
+
+function getTextNodeXPath(node: Text): string {
+  const parent = node.parentElement;
+  if (!parent) return "";
+
+  const textSiblings = Array.from(parent.childNodes).filter(
+    (child) => child.nodeType === Node.TEXT_NODE
+  );
+  const index = textSiblings.indexOf(node) + 1;
+  return `${getXPath(parent)}/text()[${index}]`;
+}
+
+function findAppendContainer(start: Element): Element | null {
+  const container = start.closest(Array.from(APPEND_TAGS).map((tag) => tag.toLowerCase()).join(","));
+  if (!container) return null;
+  if (container.closest(INTERACTIVE_SELECTORS)) return null;
+  return container;
 }

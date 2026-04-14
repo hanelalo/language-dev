@@ -18,6 +18,7 @@ export interface TranslateEngine {
 }
 
 export type TranslateOptions = {
-  domainPrompt?: string;
+  systemPrompt?: string; // 自定义系统提示词模板
+  domainPrompt?: string; // 领域提示词
   userInstruction?: string;
 };
