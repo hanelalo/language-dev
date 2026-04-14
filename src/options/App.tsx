@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { DEFAULT_SETTINGS, type Settings } from "../shared/storage-schema";
+import { getSettings, saveSettings, getEngineConfig, saveEngineConfig } from "../background/config-store";
 
 // 内置领域
 const BUILTIN_DOMAINS = [
@@ -11,81 +12,111 @@ const BUILTIN_DOMAINS = [
   { id: "literature", name: "文学", prompt: "优先保留文风和修辞，同时确保语义忠实。" },
 ];
 
+// 清新自然风格配色
+const colors = {
+  bg: "#F8FBF9",
+  card: "#FFFFFF",
+  primary: "#10B981",
+  primaryHover: "#059669",
+  primaryLight: "#D1FAE5",
+  text: "#1F2937",
+  textSecondary: "#6B7280",
+  border: "#E5E7EB",
+  inputBg: "#F9FAFB",
+  success: "#34D399",
+  footer: "#9CA3AF",
+};
+
 export function OptionsApp() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [deeplKey, setDeeplKey] = useState("");
+  const [deeplPlan, setDeeplPlan] = useState<"free" | "pro">("pro");
   const [openaiKey, setOpenaiKey] = useState("");
   const [openaiModel, setOpenaiModel] = useState("gpt-4o");
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // 加载保存的设置
   useEffect(() => {
-    chrome.storage.local.get(["settings", "engines"], (result) => {
-      if (result.settings) {
-        setSettings(result.settings);
-      }
-      if (result.engines?.deepl?.apiKey) {
-        setDeeplKey(result.engines.deepl.apiKey);
-      }
-      if (result.engines?.openai?.apiKey) {
-        setOpenaiKey(result.engines.openai.apiKey);
-      }
-      if (result.engines?.openai?.model) {
-        setOpenaiModel(result.engines.openai.model);
-      }
-    });
+    async function loadConfig() {
+      setLoading(true);
+      const [loadedSettings, deeplConfig, openaiConfig] = await Promise.all([
+        getSettings(),
+        getEngineConfig("deepl"),
+        getEngineConfig("openai"),
+      ]);
+      setSettings(loadedSettings);
+      if (deeplConfig.apiKey) setDeeplKey(deeplConfig.apiKey);
+      if (deeplConfig.plan) setDeeplPlan(deeplConfig.plan as "free" | "pro");
+      if (openaiConfig.apiKey) setOpenaiKey(openaiConfig.apiKey);
+      if (openaiConfig.model) setOpenaiModel(openaiConfig.model);
+      setLoading(false);
+    }
+    loadConfig();
   }, []);
 
-  const handleSave = () => {
-    chrome.storage.local.set({
-      settings,
-      engines: {
-        deepl: { apiKey: deeplKey },
-        openai: { apiKey: openaiKey, model: openaiModel },
-      },
-    }, () => {
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    });
+  const handleSave = async () => {
+    await Promise.all([
+      saveSettings(settings),
+      saveEngineConfig("deepl", { apiKey: deeplKey, plan: deeplPlan }),
+      saveEngineConfig("openai", { apiKey: openaiKey, model: openaiModel }),
+    ]);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
   const styles: Record<string, React.CSSProperties> = {
     container: {
-      maxWidth: 720,
+      maxWidth: 640,
       margin: "0 auto",
-      padding: "32px 24px",
+      padding: "40px 24px",
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      color: "#334155",
-      background: "#ffffff",
+      color: colors.text,
+      background: colors.bg,
+      minHeight: "100vh",
     },
     header: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
       marginBottom: 32,
       paddingBottom: 20,
-      borderBottom: "1px solid #e2e8f0",
+      borderBottom: `1px solid ${colors.border}`,
+    },
+    headerLeft: {
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+    },
+    logo: {
+      width: 40,
+      height: 40,
+      borderRadius: 10,
     },
     title: {
-      fontSize: 24,
+      fontSize: 22,
       fontWeight: 700,
-      margin: "0 0 6px 0",
-      color: "#0f172a",
+      margin: 0,
+      color: colors.text,
     },
     subtitle: {
-      fontSize: 14,
-      color: "#64748b",
-      margin: 0,
+      fontSize: 13,
+      color: colors.textSecondary,
+      margin: "4px 0 0 0",
     },
     section: {
-      marginBottom: 28,
-      padding: 20,
-      background: "#f8fafc",
-      borderRadius: 12,
-      border: "1px solid #e2e8f0",
+      marginBottom: 24,
+      padding: 24,
+      background: colors.card,
+      borderRadius: 16,
+      border: `1px solid ${colors.border}`,
+      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
     },
     sectionTitle: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: 600,
-      margin: "0 0 16px 0",
-      color: "#1e293b",
+      margin: "0 0 20px 0",
+      color: colors.text,
       display: "flex",
       alignItems: "center",
       gap: 8,
@@ -97,46 +128,50 @@ export function OptionsApp() {
       display: "block",
       fontSize: 13,
       fontWeight: 500,
-      color: "#475569",
+      color: colors.textSecondary,
       marginBottom: 6,
     },
     input: {
       width: "100%",
-      padding: "10px 12px",
+      padding: "12px 14px",
       fontSize: 14,
-      border: "1px solid #cbd5e1",
-      borderRadius: 6,
+      border: `1px solid ${colors.border}`,
+      borderRadius: 10,
       boxSizing: "border-box",
       outline: "none",
+      background: colors.inputBg,
+      transition: "border-color 0.2s, box-shadow 0.2s",
     },
     select: {
       width: "100%",
-      padding: "10px 12px",
+      padding: "12px 14px",
       fontSize: 14,
-      border: "1px solid #cbd5e1",
-      borderRadius: 6,
+      border: `1px solid ${colors.border}`,
+      borderRadius: 10,
       boxSizing: "border-box",
-      background: "#ffffff",
+      background: colors.card,
       outline: "none",
+      cursor: "pointer",
+      transition: "border-color 0.2s",
     },
     promptBox: {
       marginTop: 12,
-      padding: 12,
-      background: "#f1f5f9",
-      borderRadius: 6,
-      border: "1px solid #e2e8f0",
+      padding: 14,
+      background: colors.primaryLight,
+      borderRadius: 10,
+      border: `1px solid ${colors.primary}30`,
     },
     promptLabel: {
       fontSize: 11,
-      fontWeight: 500,
-      color: "#94a3b8",
-      marginBottom: 4,
+      fontWeight: 600,
+      color: colors.primary,
+      marginBottom: 6,
       textTransform: "uppercase" as const,
       letterSpacing: "0.5px",
     },
     promptText: {
       fontSize: 13,
-      color: "#475569",
+      color: colors.text,
       lineHeight: 1.6,
       margin: 0,
     },
@@ -144,27 +179,32 @@ export function OptionsApp() {
       display: "flex",
       alignItems: "center",
       gap: 16,
-      marginTop: 24,
+      marginTop: 28,
     },
     saveBtn: {
-      padding: "12px 28px",
-      fontSize: 14,
+      padding: "14px 32px",
+      fontSize: 15,
       fontWeight: 600,
       color: "#ffffff",
-      background: "#7c3aed",
+      background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryHover} 100%)`,
       border: "none",
-      borderRadius: 6,
+      borderRadius: 10,
       cursor: "pointer",
+      boxShadow: `0 2px 8px ${colors.primary}40`,
+      transition: "transform 0.15s, box-shadow 0.15s",
     },
     successMsg: {
       fontSize: 14,
-      color: "#16a34a",
+      color: colors.primary,
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
     },
     footer: {
-      marginTop: 40,
-      paddingTop: 20,
-      borderTop: "1px solid #e2e8f0",
-      color: "#94a3b8",
+      marginTop: 48,
+      paddingTop: 24,
+      borderTop: `1px solid ${colors.border}`,
+      color: colors.footer,
       fontSize: 12,
       textAlign: "center" as const,
     },
@@ -173,14 +213,24 @@ export function OptionsApp() {
   return (
     <main style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>扩展设置</h1>
-        <p style={styles.subtitle}>配置翻译引擎和领域 Prompt</p>
+        <div style={styles.headerLeft}>
+          <img src="../../public/icon-128.svg" alt="logo" style={styles.logo} />
+          <div>
+            <h1 style={styles.title}>Web Page Translator</h1>
+            <p style={styles.subtitle}>配置翻译引擎和领域设置</p>
+          </div>
+        </div>
       </header>
 
       {/* 翻译引擎配置 */}
       <section style={styles.section}>
         <h2 style={styles.sectionTitle}>
-          <span>🌐</span> 翻译引擎
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+          翻译引擎
         </h2>
 
         <div style={styles.field}>
@@ -192,6 +242,18 @@ export function OptionsApp() {
             placeholder="输入 DeepL API Key"
             style={styles.input}
           />
+        </div>
+
+        <div style={styles.field}>
+          <label style={styles.label}>DeepL Plan</label>
+          <select
+            value={deeplPlan}
+            onChange={(e) => setDeeplPlan(e.target.value as "free" | "pro")}
+            style={styles.select}
+          >
+            <option value="pro">Pro</option>
+            <option value="free">Free</option>
+          </select>
         </div>
 
         <div style={styles.field}>
@@ -220,10 +282,17 @@ export function OptionsApp() {
         </div>
       </section>
 
-      {/* 领域 Prompt 配置 */}
+      {/* 翻译设置 */}
       <section style={styles.section}>
         <h2 style={styles.sectionTitle}>
-          <span>📝</span> 领域 Prompt
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+            <polyline points="14,2 14,8 20,8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <line x1="10" y1="9" x2="8" y2="9"/>
+          </svg>
+          领域 Prompt
         </h2>
 
         <div style={styles.field}>
@@ -270,10 +339,17 @@ export function OptionsApp() {
 
       {/* 保存按钮 */}
       <div style={styles.actions}>
-        <button onClick={handleSave} style={styles.saveBtn}>
+        <button onClick={handleSave} disabled={loading} style={styles.saveBtn}>
           保存设置
         </button>
-        {saved && <span style={styles.successMsg}>✓ 保存成功</span>}
+        {saved && (
+          <span style={styles.successMsg}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20,6 9,17 4,12"/>
+            </svg>
+            保存成功
+          </span>
+        )}
       </div>
 
       <footer style={styles.footer}>
