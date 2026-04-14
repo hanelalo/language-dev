@@ -6,6 +6,11 @@ export default defineManifest({
   version: "0.1.0",
   permissions: ["storage", "activeTab", "scripting"],
   host_permissions: ["<all_urls>"],
+  icons: {
+    "16": "public/icon-16.svg",
+    "48": "public/icon-48.svg",
+    "128": "public/icon-128.svg"
+  },
   action: { default_popup: "src/popup/index.html" },
   background: { service_worker: "src/background/index.ts", type: "module" },
   content_scripts: [
