@@ -15,5 +15,8 @@ export default defineManifest({
       run_at: "document_idle"
     }
   ],
-  options_page: "src/options/index.html"
+  options_ui: {
+    page: "src/options/index.html",
+    open_in_tab: true
+  }
 });
