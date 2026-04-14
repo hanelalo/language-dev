@@ -6,12 +6,9 @@ export async function runPageTranslationFlow(html: string): Promise<{ completed:
   let failed = 0;
 
   for (const seg of segments) {
-    try {
-      void seg.segmentId;
-      completed += 1;
-    } catch {
-      failed += 1;
-    }
+    // TODO: Submit to background for translation via chrome.runtime.sendMessage
+    void seg.segmentId; // Placeholder - actual translation pending integration
+    completed += 1;
   }
 
   return { completed, failed };
