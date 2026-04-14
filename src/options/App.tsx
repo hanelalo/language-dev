@@ -49,56 +49,168 @@ export function OptionsApp() {
     });
   };
 
+  const styles: Record<string, React.CSSProperties> = {
+    container: {
+      maxWidth: 720,
+      margin: "0 auto",
+      padding: "32px 24px",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      color: "#334155",
+      background: "#ffffff",
+    },
+    header: {
+      marginBottom: 32,
+      paddingBottom: 20,
+      borderBottom: "1px solid #e2e8f0",
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: 700,
+      margin: "0 0 6px 0",
+      color: "#0f172a",
+    },
+    subtitle: {
+      fontSize: 14,
+      color: "#64748b",
+      margin: 0,
+    },
+    section: {
+      marginBottom: 28,
+      padding: 20,
+      background: "#f8fafc",
+      borderRadius: 12,
+      border: "1px solid #e2e8f0",
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: 600,
+      margin: "0 0 16px 0",
+      color: "#1e293b",
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+    },
+    field: {
+      marginBottom: 16,
+    },
+    label: {
+      display: "block",
+      fontSize: 13,
+      fontWeight: 500,
+      color: "#475569",
+      marginBottom: 6,
+    },
+    input: {
+      width: "100%",
+      padding: "10px 12px",
+      fontSize: 14,
+      border: "1px solid #cbd5e1",
+      borderRadius: 6,
+      boxSizing: "border-box",
+      outline: "none",
+    },
+    select: {
+      width: "100%",
+      padding: "10px 12px",
+      fontSize: 14,
+      border: "1px solid #cbd5e1",
+      borderRadius: 6,
+      boxSizing: "border-box",
+      background: "#ffffff",
+      outline: "none",
+    },
+    promptBox: {
+      marginTop: 12,
+      padding: 12,
+      background: "#f1f5f9",
+      borderRadius: 6,
+      border: "1px solid #e2e8f0",
+    },
+    promptLabel: {
+      fontSize: 11,
+      fontWeight: 500,
+      color: "#94a3b8",
+      marginBottom: 4,
+      textTransform: "uppercase" as const,
+      letterSpacing: "0.5px",
+    },
+    promptText: {
+      fontSize: 13,
+      color: "#475569",
+      lineHeight: 1.6,
+      margin: 0,
+    },
+    actions: {
+      display: "flex",
+      alignItems: "center",
+      gap: 16,
+      marginTop: 24,
+    },
+    saveBtn: {
+      padding: "12px 28px",
+      fontSize: 14,
+      fontWeight: 600,
+      color: "#ffffff",
+      background: "#7c3aed",
+      border: "none",
+      borderRadius: 6,
+      cursor: "pointer",
+    },
+    successMsg: {
+      fontSize: 14,
+      color: "#16a34a",
+    },
+    footer: {
+      marginTop: 40,
+      paddingTop: 20,
+      borderTop: "1px solid #e2e8f0",
+      color: "#94a3b8",
+      fontSize: 12,
+      textAlign: "center" as const,
+    },
+  };
+
   return (
-    <main style={{ maxWidth: 640, margin: "0 auto", padding: "24px 16px", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
-      <header style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 600, margin: "0 0 8px 0", color: "#1e293b" }}>扩展设置</h1>
-        <p style={{ margin: 0, color: "#64748b", fontSize: 14 }}>配置翻译引擎和领域 Prompt</p>
+    <main style={styles.container}>
+      <header style={styles.header}>
+        <h1 style={styles.title}>扩展设置</h1>
+        <p style={styles.subtitle}>配置翻译引擎和领域 Prompt</p>
       </header>
 
       {/* 翻译引擎配置 */}
-      <section style={{ background: "#f8fafc", borderRadius: 12, padding: 24, marginBottom: 24 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 20px 0", color: "#1e293b", display: "flex", alignItems: "center", gap: 8 }}>
+      <section style={styles.section}>
+        <h2 style={styles.sectionTitle}>
           <span>🌐</span> 翻译引擎
         </h2>
 
-        {/* DeepL */}
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ display: "block", fontSize: 14, fontWeight: 500, color: "#475569", marginBottom: 6 }}>
-            DeepL API Key
-          </label>
+        <div style={styles.field}>
+          <label style={styles.label}>DeepL API Key</label>
           <input
             type="password"
             value={deeplKey}
             onChange={(e) => setDeeplKey(e.target.value)}
             placeholder="输入 DeepL API Key"
-            style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: "1px solid #e2e8f0", borderRadius: 6, boxSizing: "border-box" }}
+            style={styles.input}
           />
         </div>
 
-        {/* OpenAI */}
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ display: "block", fontSize: 14, fontWeight: 500, color: "#475569", marginBottom: 6 }}>
-            OpenAI API Key
-          </label>
+        <div style={styles.field}>
+          <label style={styles.label}>OpenAI API Key</label>
           <input
             type="password"
             value={openaiKey}
             onChange={(e) => setOpenaiKey(e.target.value)}
             placeholder="输入 OpenAI API Key"
-            style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: "1px solid #e2e8f0", borderRadius: 6, boxSizing: "border-box" }}
+            style={styles.input}
           />
         </div>
 
-        {/* OpenAI Model */}
-        <div>
-          <label style={{ display: "block", fontSize: 14, fontWeight: 500, color: "#475569", marginBottom: 6 }}>
-            OpenAI 模型
-          </label>
+        <div style={styles.field}>
+          <label style={styles.label}>OpenAI 模型</label>
           <select
             value={openaiModel}
             onChange={(e) => setOpenaiModel(e.target.value)}
-            style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: "1px solid #e2e8f0", borderRadius: 6, boxSizing: "border-box", background: "white" }}
+            style={styles.select}
           >
             <option value="gpt-4o">GPT-4o</option>
             <option value="gpt-4o-mini">GPT-4o Mini</option>
@@ -109,20 +221,17 @@ export function OptionsApp() {
       </section>
 
       {/* 领域 Prompt 配置 */}
-      <section style={{ background: "#f8fafc", borderRadius: 12, padding: 24, marginBottom: 24 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 20px 0", color: "#1e293b", display: "flex", alignItems: "center", gap: 8 }}>
+      <section style={styles.section}>
+        <h2 style={styles.sectionTitle}>
           <span>📝</span> 领域 Prompt
         </h2>
 
-        {/* 目标语言 */}
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ display: "block", fontSize: 14, fontWeight: 500, color: "#475569", marginBottom: 6 }}>
-            目标语言
-          </label>
+        <div style={styles.field}>
+          <label style={styles.label}>目标语言</label>
           <select
             value={settings.targetLang}
             onChange={(e) => setSettings({ ...settings, targetLang: e.target.value })}
-            style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: "1px solid #e2e8f0", borderRadius: 6, boxSizing: "border-box", background: "white" }}
+            style={styles.select}
           >
             <option value="zh-CN">中文（简体）</option>
             <option value="zh-TW">中文（繁体）</option>
@@ -135,15 +244,12 @@ export function OptionsApp() {
           </select>
         </div>
 
-        {/* 领域选择 */}
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ display: "block", fontSize: 14, fontWeight: 500, color: "#475569", marginBottom: 6 }}>
-            翻译领域
-          </label>
+        <div style={styles.field}>
+          <label style={styles.label}>翻译领域</label>
           <select
             value={settings.currentDomain}
             onChange={(e) => setSettings({ ...settings, currentDomain: e.target.value })}
-            style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: "1px solid #e2e8f0", borderRadius: 6, boxSizing: "border-box", background: "white" }}
+            style={styles.select}
           >
             <option value="">不使用领域 Prompt</option>
             {BUILTIN_DOMAINS.map((d) => (
@@ -152,13 +258,10 @@ export function OptionsApp() {
           </select>
         </div>
 
-        {/* 领域 Prompt 预览 */}
         {settings.currentDomain && (
-          <div style={{ background: "#f1f5f9", borderRadius: 6, padding: 12 }}>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "#64748b", marginBottom: 4 }}>
-              领域 Prompt 预览
-            </label>
-            <p style={{ margin: 0, fontSize: 13, color: "#475569", lineHeight: 1.5 }}>
+          <div style={styles.promptBox}>
+            <p style={styles.promptLabel}>领域 Prompt 预览</p>
+            <p style={styles.promptText}>
               {BUILTIN_DOMAINS.find((d) => d.id === settings.currentDomain)?.prompt || ""}
             </p>
           </div>
@@ -166,28 +269,14 @@ export function OptionsApp() {
       </section>
 
       {/* 保存按钮 */}
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <button
-          onClick={handleSave}
-          style={{
-            padding: "12px 24px",
-            fontSize: 15,
-            fontWeight: 500,
-            color: "white",
-            background: "#7c3aed",
-            border: "none",
-            borderRadius: 6,
-            cursor: "pointer",
-          }}
-        >
+      <div style={styles.actions}>
+        <button onClick={handleSave} style={styles.saveBtn}>
           保存设置
         </button>
-        {saved && (
-          <span style={{ color: "#16a34a", fontSize: 14 }}>✓ 保存成功</span>
-        )}
+        {saved && <span style={styles.successMsg}>✓ 保存成功</span>}
       </div>
 
-      <footer style={{ marginTop: 40, paddingTop: 20, borderTop: "1px solid #e2e8f0", color: "#94a3b8", fontSize: 12 }}>
+      <footer style={styles.footer}>
         Web Page Translator v0.1.0
       </footer>
     </main>
