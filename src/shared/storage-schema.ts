@@ -13,3 +13,4 @@ export const DEFAULT_SETTINGS: Settings = {
   selectionTranslate: true,
   currentDomain: "it"
 };
+
