@@ -267,7 +267,7 @@ export function OptionsApp() {
     <main style={styles.container}>
       <header style={styles.header}>
         <div style={styles.headerLeft}>
-          <img src="../../public/icon-128.png" alt="logo" style={styles.logo} />
+          <img src="/icon-128.png" alt="logo" style={styles.logo} />
           <div>
             <h1 style={styles.title}>Web Page Translator</h1>
             <p style={styles.subtitle}>配置翻译引擎和领域设置</p>

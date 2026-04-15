@@ -153,7 +153,7 @@ export function PopupApp() {
     <main style={styles.container}>
       <header style={styles.header}>
         <div style={styles.headerLeft}>
-          <img src="../../public/icon-48.png" alt="logo" style={styles.logo} />
+          <img src="/icon-48.png" alt="logo" style={styles.logo} />
           <h1 style={styles.title}>网页翻译器</h1>
         </div>
         <button
