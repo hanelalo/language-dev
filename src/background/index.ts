@@ -10,32 +10,45 @@ import { MESSAGE_TYPES } from "../shared/constants";
 registerEngine(createDeepLEngine(""));
 registerEngine(createOpenAIEngine(""));
 
-// Load API keys from storage and update engines
-async function initializeEngines() {
-  const deeplConfig = await getEngineConfig("deepl");
-  if (deeplConfig.apiKey) {
-    registerEngine(createDeepLEngine(deeplConfig.apiKey, (deeplConfig.plan as "free" | "pro") ?? "free"));
-  }
-  const openaiConfig = await getEngineConfig("openai");
-  if (openaiConfig.apiKey) {
-    registerEngine(createOpenAIEngine(openaiConfig.apiKey, openaiConfig.model ?? "gpt-4o"));
-  }
+// Track initialization state for MV3 Service Worker cold start safety.
+// The message listener will wait for initialization before handling requests.
+let engineInitPromise: Promise<void> | null = null;
 
-  // Load and register all custom APIs
-  const customApis = await getCustomApis();
-  for (const api of customApis) {
-    if (api.apiKey && api.baseUrl) {
-      registerEngine(createCustomLLMEngine(api.name, api.apiKey, api.model, api.baseUrl));
+function ensureEnginesInitialized(): Promise<void> {
+  if (engineInitPromise) return engineInitPromise;
+
+  engineInitPromise = (async () => {
+    const [deeplConfig, openaiConfig, customApis] = await Promise.all([
+      getEngineConfig("deepl"),
+      getEngineConfig("openai"),
+      getCustomApis(),
+    ]);
+
+    if (deeplConfig.apiKey) {
+      registerEngine(createDeepLEngine(deeplConfig.apiKey, (deeplConfig.plan as "free" | "pro") ?? "free"));
     }
-  }
+    if (openaiConfig.apiKey) {
+      registerEngine(createOpenAIEngine(openaiConfig.apiKey, openaiConfig.model ?? "gpt-4o"));
+    }
+    for (const api of customApis) {
+      if (api.apiKey && api.baseUrl) {
+        registerEngine(createCustomLLMEngine(api.name, api.apiKey, api.model, api.baseUrl));
+      }
+    }
+  })();
+
+  return engineInitPromise;
 }
 
-initializeEngines();
+// Kick off initialization immediately (non-blocking)
+ensureEnginesInitialized();
 
 // Listen for messages from content script
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === MESSAGE_TYPES.SUBMIT_SEGMENTS_BATCH) {
-    handleTranslateBatch(message.payload)
+    // Ensure engines are initialized (handles MV3 cold start race condition)
+    ensureEnginesInitialized()
+      .then(() => handleTranslateBatch(message.payload))
       .then((result) => sendResponse({ success: true, data: result }))
       .catch((error) => sendResponse({ success: false, error: error.message }));
     return true; // async response
