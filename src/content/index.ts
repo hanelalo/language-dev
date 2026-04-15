@@ -382,22 +382,28 @@ function ensureFloatingToggle(): void {
   btn.style.left = "12px";
   btn.style.top = "40vh";
   btn.style.zIndex = "2147483646";
-  btn.style.width = "44px";
-  btn.style.height = "44px";
+  btn.style.width = "28px";
+  btn.style.height = "28px";
   btn.style.padding = "0";
-  btn.style.border = "1px solid rgba(0,0,0,0.15)";
+  btn.style.border = "none";
   btn.style.borderRadius = "50%";
-  btn.style.background = "#ffffff";
-  btn.style.color = "#111827";
-  btn.style.fontSize = "14px";
-  btn.style.fontWeight = "600";
+  btn.style.background = "transparent";
   btn.style.cursor = "grab";
-  btn.style.boxShadow = "0 4px 12px rgba(0,0,0,0.12)";
+  btn.style.boxShadow = "none";
   btn.style.userSelect = "none";
   btn.style.touchAction = "none";
   btn.style.display = "flex";
   btn.style.alignItems = "center";
   btn.style.justifyContent = "center";
+
+  const img = document.createElement("img");
+  img.src = chrome.runtime.getURL("icon-48.png");
+  img.alt = "translation toggle";
+  img.draggable = false;
+  img.style.width = "28px";
+  img.style.height = "28px";
+  img.style.pointerEvents = "none";
+  btn.appendChild(img);
 
   applySavedPosition(btn);
   setupFloatingDrag(btn);
@@ -435,25 +441,39 @@ function handleFloatingToggleClick(): void {
 function updateFloatingToggleLabel(): void {
   if (!floatingToggleEl) return;
 
+  const img = floatingToggleEl.querySelector("img");
+  if (!img) return;
+
   if (isPageTranslating) {
-    floatingToggleEl.textContent = "…";
+    img.style.opacity = "0.5";
+    img.style.animation = "wpt-pulse 1.2s ease-in-out infinite";
     floatingToggleEl.title = "翻译中...";
     floatingToggleEl.setAttribute("aria-label", "翻译中...");
     floatingToggleEl.style.cursor = "wait";
+    ensurePulseKeyframes();
     return;
   }
 
+  img.style.animation = "none";
   floatingToggleEl.style.cursor = "grab";
   if (isTranslationVisible()) {
-    floatingToggleEl.textContent = "原";
+    img.style.opacity = "0.45";
     floatingToggleEl.title = "恢复原文";
     floatingToggleEl.setAttribute("aria-label", "恢复原文");
     return;
   }
 
-  floatingToggleEl.textContent = "译";
+  img.style.opacity = "1";
   floatingToggleEl.title = "显示译文";
   floatingToggleEl.setAttribute("aria-label", "显示译文");
+}
+
+function ensurePulseKeyframes(): void {
+  if (document.getElementById("wpt-pulse-style")) return;
+  const style = document.createElement("style");
+  style.id = "wpt-pulse-style";
+  style.textContent = `@keyframes wpt-pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }`;
+  document.head.appendChild(style);
 }
 
 function setupFloatingDrag(btn: HTMLButtonElement): void {

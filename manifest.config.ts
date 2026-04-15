@@ -23,5 +23,11 @@ export default defineManifest({
   options_ui: {
     page: "src/options/index.html",
     open_in_tab: true
-  }
+  },
+  web_accessible_resources: [
+    {
+      resources: ["icon-48.png"],
+      matches: ["<all_urls>"]
+    }
+  ]
 });
