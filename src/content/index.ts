@@ -1,3 +1,11 @@
+// 扩展 HTMLElement 用于存储 tooltip 的事件 handler
+declare global {
+  interface HTMLElement {
+    _outsideClickHandler?: (e: MouseEvent) => void;
+    _escHandler?: (e: KeyboardEvent) => void;
+  }
+}
+
 import { extractSegments } from "./dom-extractor";
 import {
   hasCompletedTranslations,
@@ -19,6 +27,9 @@ const FLOATING_POSITION_KEY = "wpt-floating-position-v1";
 
 // Selection translation state
 let selectionTooltip: HTMLElement | null = null;
+let isClickInsideTooltip = false;
+// 防止重复创建 tooltip
+let isCreatingTooltip = false;
 
 function escapeHtml(str: string): string {
   return str
@@ -28,8 +39,25 @@ function escapeHtml(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function showSelectionTooltip(x: number, y: number, source: string, translated: string): void {
-  hideSelectionTooltip();
+// 配色与 popup 风格一致
+const TOOLTIP_COLORS = {
+  bg: "#F8FBF9",
+  card: "#FFFFFF",
+  primary: "#10B981",
+  primaryHover: "#059669",
+  text: "#1F2937",
+  textSecondary: "#6B7280",
+  border: "#E5E7EB",
+  error: "#dc2626",
+  loading: "#9CA3AF",
+};
+
+function showSelectionTooltip(x: number, y: number, source: string, translated?: string, loading = false): void {
+  // 防止重复创建：如果已有 tooltip 或正在创建中，直接返回
+  if (isCreatingTooltip || selectionTooltip) {
+    return;
+  }
+  isCreatingTooltip = true;
 
   const tooltip = document.createElement("div");
   tooltip.className = "wpt-selection-tooltip";
@@ -38,11 +66,11 @@ function showSelectionTooltip(x: number, y: number, source: string, translated: 
     position: fixed;
     left: ${x + 10}px;
     top: ${y + 10}px;
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
+    background: ${TOOLTIP_COLORS.card};
+    border: 1px solid ${TOOLTIP_COLORS.border};
     border-radius: 8px;
     padding: 12px 16px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     z-index: 2147483647;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 14px;
@@ -51,69 +79,211 @@ function showSelectionTooltip(x: number, y: number, source: string, translated: 
 
   const sourceDiv = document.createElement("div");
   sourceDiv.style.marginBottom = "8px";
-  sourceDiv.innerHTML = `<strong>原文：</strong>${escapeHtml(source)}`;
+  sourceDiv.style.color = TOOLTIP_COLORS.text;
+  sourceDiv.appendChild(document.createElement("strong")).textContent = "原文：";
+  sourceDiv.appendChild(document.createTextNode(source));
 
   const translatedDiv = document.createElement("div");
-  translatedDiv.innerHTML = `<strong>译文：</strong>${escapeHtml(translated)}`;
+  translatedDiv.id = "wpt-tooltip-translated";
+  translatedDiv.style.marginBottom = "8px";
+  translatedDiv.style.color = TOOLTIP_COLORS.text;
+  if (translated !== undefined) {
+    translatedDiv.appendChild(document.createElement("strong")).textContent = "译文：";
+    translatedDiv.appendChild(document.createTextNode(translated));
+  }
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.style.cssText = `
+    display: inline-block;
+    padding: 4px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #ffffff;
+    background: ${TOOLTIP_COLORS.primary};
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+  `;
+
+  if (loading) {
+    btn.textContent = "翻译中...";
+    btn.disabled = true;
+    btn.style.background = TOOLTIP_COLORS.loading;
+    btn.style.cursor = "wait";
+    translatedDiv.appendChild(document.createElement("strong")).textContent = "译文：";
+    translatedDiv.appendChild(document.createTextNode("翻译中..."));
+  } else if (translated !== undefined) {
+    btn.textContent = "已翻译";
+    btn.disabled = true;
+    btn.style.background = TOOLTIP_COLORS.primary;
+    btn.style.cursor = "default";
+  } else {
+    btn.textContent = "翻译";
+    btn.addEventListener("click", (e) => {
+      console.log("[btn click] fired, stack:", new Error().stack);
+      e.stopPropagation();
+      doTranslate(source, x, y, tooltip, sourceDiv, translatedDiv, btn);
+    });
+    btn.addEventListener("mouseenter", () => {
+      btn.style.background = TOOLTIP_COLORS.primaryHover;
+    });
+    btn.addEventListener("mouseleave", () => {
+      btn.style.background = TOOLTIP_COLORS.primary;
+    });
+  }
 
   tooltip.appendChild(sourceDiv);
   tooltip.appendChild(translatedDiv);
+  tooltip.appendChild(btn);
   document.body.appendChild(tooltip);
   selectionTooltip = tooltip;
 
+  // 外部点击关闭（使用 flag 判断是否点击在 tooltip 内部）
+  const outsideClickHandler = (e: MouseEvent) => {
+    console.log("[outsideClick] fired, isClickInsideTooltip:", isClickInsideTooltip);
+    if (isClickInsideTooltip) {
+      isClickInsideTooltip = false;
+      return;
+    }
+    console.log("[outsideClick] hiding tooltip");
+    hideSelectionTooltip();
+  };
+
+  // 记录 tooltip 内部点击
+  tooltip.addEventListener("mousedown", (e) => {
+    console.log("[tooltip mousedown]");
+    isClickInsideTooltip = true;
+  });
+  btn.addEventListener("mousedown", (e) => {
+    console.log("[btn mousedown]");
+    isClickInsideTooltip = true;
+  });
+
+  // btn click 调试
+  btn.addEventListener("click", (e) => {
+    console.log("[btn click] event fired, isClickInsideTooltip:", isClickInsideTooltip);
+  });
+
   setTimeout(() => {
-    document.addEventListener("click", hideSelectionTooltipOnClick);
+    document.addEventListener("click", outsideClickHandler);
+    (selectionTooltip as HTMLElement)._outsideClickHandler = outsideClickHandler;
   }, 100);
+
+  // Escape 键关闭
+  const escHandler = (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      hideSelectionTooltip();
+    }
+  };
+  document.addEventListener("keydown", escHandler);
+  (selectionTooltip as HTMLElement)._escHandler = escHandler;
+
+  // 重置创建状态（当 tooltip 真正显示出来后）
+  isCreatingTooltip = false;
+}
+
+async function doTranslate(
+  source: string,
+  x: number,
+  y: number,
+  tooltip: HTMLElement,
+  sourceDiv: HTMLDivElement,
+  translatedDiv: HTMLDivElement,
+  btn: HTMLButtonElement
+): Promise<void> {
+  // 防止重复调用：如果按钮已经不是"翻译"状态，说明已经在翻译或已完成
+  if (btn.textContent !== "翻译") {
+    console.log("[doTranslate] ignored, btn text is:", btn.textContent);
+    return;
+  }
+
+  console.log("[doTranslate] start");
+  btn.textContent = "翻译中...";
+  btn.disabled = true;
+  btn.style.background = TOOLTIP_COLORS.loading;
+  btn.style.cursor = "wait";
+  translatedDiv.textContent = "";
+  translatedDiv.style.color = TOOLTIP_COLORS.text;
+  translatedDiv.appendChild(document.createElement("strong")).textContent = "译文：";
+  translatedDiv.appendChild(document.createTextNode("翻译中..."));
+  console.log("[doTranslate] UI set to 翻译中");
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: MESSAGE_TYPES.SUBMIT_SEGMENTS_BATCH,
+      payload: { texts: [source] },
+    });
+    console.log("[doTranslate] response:", response.success);
+
+    if (response.success && response.data.results[0].status === "ok") {
+      const result = response.data.results[0];
+      translatedDiv.textContent = "";
+      translatedDiv.style.color = TOOLTIP_COLORS.text;
+      translatedDiv.appendChild(document.createElement("strong")).textContent = "译文：";
+      translatedDiv.appendChild(document.createTextNode(result.text));
+      btn.textContent = "已翻译";
+      btn.disabled = true;
+      btn.style.background = TOOLTIP_COLORS.primary;
+      btn.style.cursor = "default";
+    } else {
+      translatedDiv.textContent = "";
+      translatedDiv.style.color = TOOLTIP_COLORS.error;
+      translatedDiv.appendChild(document.createElement("strong")).textContent = "译文：";
+      translatedDiv.appendChild(document.createTextNode("[翻译失败]"));
+      btn.textContent = "失败";
+      btn.disabled = true;
+      btn.style.background = TOOLTIP_COLORS.error;
+      btn.style.cursor = "default";
+    }
+  } catch (err) {
+    console.error("[doTranslate] exception:", err);
+    translatedDiv.textContent = "";
+    translatedDiv.style.color = TOOLTIP_COLORS.error;
+    translatedDiv.appendChild(document.createElement("strong")).textContent = "译文：";
+    translatedDiv.appendChild(document.createTextNode("[翻译失败]"));
+    btn.textContent = "失败";
+    btn.disabled = true;
+    btn.style.background = TOOLTIP_COLORS.error;
+    btn.style.cursor = "default";
+  }
 }
 
 function hideSelectionTooltip(): void {
   if (selectionTooltip) {
-    selectionTooltip.remove();
+    const tooltip = selectionTooltip as HTMLElement;
+    const outsideHandler = tooltip._outsideClickHandler as ((e: MouseEvent) => void) | undefined;
+    const escHandler = tooltip._escHandler as ((e: KeyboardEvent) => void) | undefined;
+
+    if (outsideHandler) {
+      document.removeEventListener("click", outsideHandler);
+    }
+    if (escHandler) {
+      document.removeEventListener("keydown", escHandler);
+    }
+
+    tooltip.remove();
     selectionTooltip = null;
-  }
-  document.removeEventListener("click", hideSelectionTooltipOnClick);
-}
-
-function hideSelectionTooltipOnClick(e: MouseEvent): void {
-  const tooltip = document.getElementById("wpt-selection-tooltip");
-  if (tooltip && !tooltip.contains(e.target as Node)) {
-    hideSelectionTooltip();
+    isClickInsideTooltip = false;
   }
 }
 
-async function handleSelectionTranslate(): Promise<void> {
+function handleSelectionTranslate(): void {
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed) {
-    hideSelectionTooltip();
     return;
   }
 
   const selectedText = selection.toString().trim();
   if (!selectedText || selectedText.length < 2) {
-    hideSelectionTooltip();
     return;
   }
 
   const range = selection.getRangeAt(0);
   const rect = range.getBoundingClientRect();
 
-  try {
-    const response = await chrome.runtime.sendMessage({
-      type: MESSAGE_TYPES.SUBMIT_SEGMENTS_BATCH,
-      payload: { texts: [selectedText] },
-    });
-
-    if (response.success) {
-      const result = response.data.results[0];
-      if (result.status === "ok") {
-        showSelectionTooltip(rect.left, rect.top, selectedText, result.text);
-      } else {
-        showSelectionTooltip(rect.left, rect.top, selectedText, "[翻译失败]");
-      }
-    }
-  } catch {
-    showSelectionTooltip(rect.left, rect.top, selectedText, "[翻译失败]");
-  }
+  showSelectionTooltip(rect.left, rect.top, selectedText);
 }
 
 export async function runPageTranslationFlow(): Promise<{ total: number; completed: number; failed: number }> {
