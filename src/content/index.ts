@@ -122,7 +122,6 @@ function showSelectionTooltip(x: number, y: number, source: string, translated?:
   } else {
     btn.textContent = "翻译";
     btn.addEventListener("click", (e) => {
-      console.log("[btn click] fired, stack:", new Error().stack);
       e.stopPropagation();
       doTranslate(source, x, y, tooltip, sourceDiv, translatedDiv, btn);
     });
@@ -141,29 +140,20 @@ function showSelectionTooltip(x: number, y: number, source: string, translated?:
   selectionTooltip = tooltip;
 
   // 外部点击关闭（使用 flag 判断是否点击在 tooltip 内部）
-  const outsideClickHandler = (e: MouseEvent) => {
-    console.log("[outsideClick] fired, isClickInsideTooltip:", isClickInsideTooltip);
+  const outsideClickHandler = () => {
     if (isClickInsideTooltip) {
       isClickInsideTooltip = false;
       return;
     }
-    console.log("[outsideClick] hiding tooltip");
     hideSelectionTooltip();
   };
 
   // 记录 tooltip 内部点击
-  tooltip.addEventListener("mousedown", (e) => {
-    console.log("[tooltip mousedown]");
+  tooltip.addEventListener("mousedown", () => {
     isClickInsideTooltip = true;
   });
-  btn.addEventListener("mousedown", (e) => {
-    console.log("[btn mousedown]");
+  btn.addEventListener("mousedown", () => {
     isClickInsideTooltip = true;
-  });
-
-  // btn click 调试
-  btn.addEventListener("click", (e) => {
-    console.log("[btn click] event fired, isClickInsideTooltip:", isClickInsideTooltip);
   });
 
   setTimeout(() => {
@@ -195,11 +185,9 @@ async function doTranslate(
 ): Promise<void> {
   // 防止重复调用：如果按钮已经不是"翻译"状态，说明已经在翻译或已完成
   if (btn.textContent !== "翻译") {
-    console.log("[doTranslate] ignored, btn text is:", btn.textContent);
     return;
   }
 
-  console.log("[doTranslate] start");
   btn.textContent = "翻译中...";
   btn.disabled = true;
   btn.style.background = TOOLTIP_COLORS.loading;
@@ -208,14 +196,12 @@ async function doTranslate(
   translatedDiv.style.color = TOOLTIP_COLORS.text;
   translatedDiv.appendChild(document.createElement("strong")).textContent = "译文：";
   translatedDiv.appendChild(document.createTextNode("翻译中..."));
-  console.log("[doTranslate] UI set to 翻译中");
 
   try {
     const response = await chrome.runtime.sendMessage({
       type: MESSAGE_TYPES.SUBMIT_SEGMENTS_BATCH,
       payload: { texts: [source] },
     });
-    console.log("[doTranslate] response:", response.success);
 
     if (response.success && response.data.results[0].status === "ok") {
       const result = response.data.results[0];
@@ -237,8 +223,7 @@ async function doTranslate(
       btn.style.background = TOOLTIP_COLORS.error;
       btn.style.cursor = "default";
     }
-  } catch (err) {
-    console.error("[doTranslate] exception:", err);
+  } catch {
     translatedDiv.textContent = "";
     translatedDiv.style.color = TOOLTIP_COLORS.error;
     translatedDiv.appendChild(document.createElement("strong")).textContent = "译文：";
