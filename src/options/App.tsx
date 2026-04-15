@@ -1,16 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { DEFAULT_SETTINGS, type Settings } from "../shared/storage-schema";
 import { getSettings, saveSettings, getEngineConfig, saveEngineConfig, getCustomApis, saveCustomApi, deleteCustomApi, getDomains, saveDomain, deleteDomain, type CustomLLMConfig, type Domain } from "../background/config-store";
-
-// 内置领域定义（必须与 config-store 保持一致）
-const BUILTIN_DOMAINS: Domain[] = [
-  { id: "it", name: "IT/技术", prompt: "你是专业 IT 技术文档翻译专家，保持术语一致并保留缩写。", builtin: true },
-  { id: "legal", name: "法律", prompt: "使用正式法律语言，保持条款与术语精确对应。", builtin: true },
-  { id: "medical", name: "医学", prompt: "使用规范医学术语，避免口语化表达。", builtin: true },
-  { id: "finance", name: "金融", prompt: "保留金融专有名词，强调数值与单位准确性。", builtin: true },
-  { id: "gaming", name: "游戏", prompt: "保留游戏语境和术语，语气自然且可读。", builtin: true },
-  { id: "literature", name: "文学", prompt: "优先保留文风和修辞，同时确保语义忠实。", builtin: true },
-];
+import { BUILTIN_DOMAINS } from "../background/config-store";
 
 // 清新自然风格配色
 const colors = {
