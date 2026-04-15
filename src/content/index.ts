@@ -27,7 +27,6 @@ const FLOATING_POSITION_KEY = "wpt-floating-position-v1";
 
 // Selection translation state
 let selectionTooltip: HTMLElement | null = null;
-let isClickInsideTooltip = false;
 // 防止重复创建 tooltip
 let isCreatingTooltip = false;
 
@@ -139,22 +138,13 @@ function showSelectionTooltip(x: number, y: number, source: string, translated?:
   document.body.appendChild(tooltip);
   selectionTooltip = tooltip;
 
-  // 外部点击关闭（使用 flag 判断是否点击在 tooltip 内部）
-  const outsideClickHandler = () => {
-    if (isClickInsideTooltip) {
-      isClickInsideTooltip = false;
+  // 外部点击关闭
+  const outsideClickHandler = (e: MouseEvent) => {
+    if (tooltip.contains(e.target as Node)) {
       return;
     }
     hideSelectionTooltip();
   };
-
-  // 记录 tooltip 内部点击
-  tooltip.addEventListener("mousedown", () => {
-    isClickInsideTooltip = true;
-  });
-  btn.addEventListener("mousedown", () => {
-    isClickInsideTooltip = true;
-  });
 
   setTimeout(() => {
     document.addEventListener("click", outsideClickHandler);
@@ -250,7 +240,6 @@ function hideSelectionTooltip(): void {
 
     tooltip.remove();
     selectionTooltip = null;
-    isClickInsideTooltip = false;
   }
 }
 
