@@ -7,9 +7,9 @@ export default defineManifest({
   permissions: ["storage", "activeTab", "scripting"],
   host_permissions: ["<all_urls>"],
   icons: {
-    "16": "public/icon-16.svg",
-    "48": "public/icon-48.svg",
-    "128": "public/icon-128.svg"
+    "16": "icon-16.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
   },
   action: { default_popup: "src/popup/index.html" },
   background: { service_worker: "src/background/index.ts", type: "module" },
