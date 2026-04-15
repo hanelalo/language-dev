@@ -173,10 +173,13 @@ async function doTranslate(
   translatedDiv: HTMLDivElement,
   btn: HTMLButtonElement
 ): Promise<void> {
-  // 防止重复调用：如果按钮已经不是"翻译"状态，说明已经在翻译或已完成
-  if (btn.textContent !== "翻译") {
+  // 防止重复调用：如果正在翻译中，则忽略
+  if (btn.textContent === "翻译中...") {
     return;
   }
+
+  // 清除之前的 onclick，避免重复绑定
+  btn.onclick = null;
 
   btn.textContent = "翻译中...";
   btn.disabled = true;
@@ -208,20 +211,30 @@ async function doTranslate(
       translatedDiv.style.color = TOOLTIP_COLORS.error;
       translatedDiv.appendChild(document.createElement("strong")).textContent = "译文：";
       translatedDiv.appendChild(document.createTextNode("[翻译失败]"));
-      btn.textContent = "失败";
-      btn.disabled = true;
-      btn.style.background = TOOLTIP_COLORS.error;
-      btn.style.cursor = "default";
+      btn.textContent = "重试";
+      btn.disabled = false;
+      btn.style.background = TOOLTIP_COLORS.primary;
+      btn.style.cursor = "pointer";
+      // 重新绑定点击事件
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        doTranslate(source, x, y, tooltip, sourceDiv, translatedDiv, btn);
+      };
     }
   } catch {
     translatedDiv.textContent = "";
     translatedDiv.style.color = TOOLTIP_COLORS.error;
     translatedDiv.appendChild(document.createElement("strong")).textContent = "译文：";
     translatedDiv.appendChild(document.createTextNode("[翻译失败]"));
-    btn.textContent = "失败";
-    btn.disabled = true;
-    btn.style.background = TOOLTIP_COLORS.error;
-    btn.style.cursor = "default";
+    btn.textContent = "重试";
+    btn.disabled = false;
+    btn.style.background = TOOLTIP_COLORS.primary;
+    btn.style.cursor = "pointer";
+    // 重新绑定点击事件
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      doTranslate(source, x, y, tooltip, sourceDiv, translatedDiv, btn);
+    };
   }
 }
 
