@@ -383,7 +383,7 @@ export function onExecute() {
   // Content script is already initialized via top-level code above
 }
 
-function ensureFloatingToggle(): void {
+async function ensureFloatingToggle(): Promise<void> {
   if (document.getElementById(FLOATING_TOGGLE_ID)) return;
 
   const btn = document.createElement("button");
@@ -553,21 +553,19 @@ function snapToEdge(btn: HTMLButtonElement): void {
 }
 
 function savePosition(btn: HTMLButtonElement): void {
-  const value = JSON.stringify({ left: btn.style.left, top: btn.style.top });
-  window.localStorage.setItem(FLOATING_POSITION_KEY, value);
+  chrome.storage.local.set({ [FLOATING_POSITION_KEY]: { left: btn.style.left, top: btn.style.top } });
 }
 
-function applySavedPosition(btn: HTMLButtonElement): void {
-  try {
-    const raw = window.localStorage.getItem(FLOATING_POSITION_KEY);
-    if (!raw) return;
-    const parsed = JSON.parse(raw) as { left?: string; top?: string };
-    if (parsed.left) btn.style.left = parsed.left;
-    if (parsed.top) btn.style.top = parsed.top;
+function applySavedPosition(btn: HTMLButtonElement): Promise<void> {
+  return chrome.storage.local.get(FLOATING_POSITION_KEY).then((result) => {
+    const pos = result[FLOATING_POSITION_KEY] as { left?: string; top?: string } | undefined;
+    if (!pos) return;
+    if (pos.left) btn.style.left = pos.left;
+    if (pos.top) btn.style.top = pos.top;
     btn.style.top = `${clamp(btn.offsetTop, 12, window.innerHeight - btn.offsetHeight - 12)}px`;
-  } catch {
-    // ignore malformed localStorage data
-  }
+  }).catch(() => {
+    // ignore storage errors
+  });
 }
 
 function clamp(value: number, min: number, max: number): number {
