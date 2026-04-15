@@ -132,9 +132,20 @@ function showSelectionTooltip(x: number, y: number, source: string, translated?:
     });
   }
 
+  const footer = document.createElement("div");
+  footer.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-top:2px;";
+  footer.appendChild(btn);
+
+  const logoImg = document.createElement("img");
+  logoImg.src = chrome.runtime.getURL("icon-48.png");
+  logoImg.alt = "";
+  logoImg.draggable = false;
+  logoImg.style.cssText = "width:18px;height:18px;pointer-events:none;opacity:0.6;";
+  footer.appendChild(logoImg);
+
   tooltip.appendChild(sourceDiv);
   tooltip.appendChild(translatedDiv);
-  tooltip.appendChild(btn);
+  tooltip.appendChild(footer);
   document.body.appendChild(tooltip);
   selectionTooltip = tooltip;
 
