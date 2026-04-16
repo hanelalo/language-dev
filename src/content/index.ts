@@ -313,6 +313,14 @@ export async function runPageTranslationFlow(): Promise<{ total: number; complet
       return { total: 0, completed: 0, failed: 0 };
     }
 
+    // Determine message type and build article context for article pages
+    const isArticlePage = !!article;
+    const batchMessageType = isArticlePage ? MESSAGE_TYPES.SUBMIT_ARTICLE_BATCH : MESSAGE_TYPES.SUBMIT_SEGMENTS_BATCH;
+    const articleContext = isArticlePage ? {
+      articleTitle: article!.title,
+      articleText: segments.map(s => s.text).join("\n\n"),
+    } : {};
+
     // 先渲染所有"翻译中..."占位
     for (const segment of segments) {
       renderTranslationBlock(segment, "翻译中...", "pending");
@@ -328,8 +336,8 @@ export async function runPageTranslationFlow(): Promise<{ total: number; complet
 
       try {
         const response = await chrome.runtime.sendMessage({
-          type: MESSAGE_TYPES.SUBMIT_SEGMENTS_BATCH,
-          payload: { texts },
+          type: batchMessageType,
+          payload: { texts, ...articleContext },
         });
 
         if (response.success) {

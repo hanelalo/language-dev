@@ -1,4 +1,4 @@
-import { handleTranslateBatch } from "./messages";
+import { handleTranslateBatch, handleArticleTranslateBatch } from "./messages";
 import { registerEngine, getEngine, listEngines } from "./engine-registry";
 import { createDeepLEngine } from "./engines/deepl-engine";
 import { createOpenAIEngine } from "./engines/openai-engine";
@@ -49,6 +49,15 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     // Ensure engines are initialized (handles MV3 cold start race condition)
     ensureEnginesInitialized()
       .then(() => handleTranslateBatch(message.payload))
+      .then((result) => sendResponse({ success: true, data: result }))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
+    return true; // async response
+  }
+
+  if (message.type === MESSAGE_TYPES.SUBMIT_ARTICLE_BATCH) {
+    // Ensure engines are initialized (handles MV3 cold start race condition)
+    ensureEnginesInitialized()
+      .then(() => handleArticleTranslateBatch(message.payload))
       .then((result) => sendResponse({ success: true, data: result }))
       .catch((error) => sendResponse({ success: false, error: error.message }));
     return true; // async response
