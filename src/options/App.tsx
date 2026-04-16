@@ -515,6 +515,43 @@ export function OptionsApp() {
           </div>
         )}
 
+        <div style={{ ...styles.field, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <label style={{ ...styles.label, marginBottom: 0 }}>术语表预扫描</label>
+          <label style={{ position: "relative", display: "inline-block", width: 44, height: 24, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={settings.glossaryPreScan ?? false}
+              onChange={(e) => setSettings({ ...settings, glossaryPreScan: e.target.checked })}
+              aria-label="术语表预扫描"
+              style={{ opacity: 0, width: 0, height: 0 }}
+            />
+            <span style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: settings.glossaryPreScan ? colors.primary : colors.border,
+              borderRadius: 12,
+              transition: "background-color 0.2s",
+            }} />
+            <span style={{
+              position: "absolute",
+              top: 2,
+              left: settings.glossaryPreScan ? 22 : 2,
+              width: 20,
+              height: 20,
+              backgroundColor: "#fff",
+              borderRadius: "50%",
+              transition: "left 0.2s",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+            }} />
+          </label>
+        </div>
+        <p style={{ fontSize: 11, color: colors.textSecondary, marginTop: -12, marginBottom: 16 }}>
+          翻译文章时，先扫描全文生成术语表以确保翻译一致性（仅 LLM 引擎生效）
+        </p>
+
         <div style={{ marginTop: 16 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
             <label style={styles.label}>系统提示词模板</label>

@@ -18,4 +18,9 @@ describe("OptionsApp", () => {
     render(<OptionsApp />);
     expect(screen.getByText("翻译设置")).toBeDefined();
   });
+
+  it("renders glossary pre-scan toggle", () => {
+    render(<OptionsApp />);
+    expect(screen.getAllByLabelText("术语表预扫描")[0]).toBeDefined();
+  });
 });
