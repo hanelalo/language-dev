@@ -10,4 +10,20 @@ describe("buildSystemPrompt", () => {
     });
     expect(result).toBe("BASE\n\nDOMAIN\n\nUSER");
   });
+
+  it("appends glossary guide when provided", () => {
+    const result = buildSystemPrompt({
+      basePrompt: "Base prompt.",
+      glossaryGuide: "- Kubernetes → keep original"
+    });
+    expect(result).toContain("# Article-Specific Glossary Guide");
+    expect(result).toContain("- Kubernetes → keep original");
+  });
+
+  it("omits glossary section when not provided", () => {
+    const result = buildSystemPrompt({
+      basePrompt: "Base prompt."
+    });
+    expect(result).not.toContain("Glossary");
+  });
 });
