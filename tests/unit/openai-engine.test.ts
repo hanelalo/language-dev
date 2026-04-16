@@ -71,4 +71,23 @@ describe("OpenAI Engine", () => {
     expect(DEFAULT_SYSTEM_PROMPT).toContain("{{source_lang}}");
     expect(DEFAULT_SYSTEM_PROMPT).toContain("Preserve the original meaning precisely");
   });
+
+  it("appends glossary guide to system prompt", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch" as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: "如何" } }]
+      })
+    } as Response);
+
+    const engine = createOpenAIEngine("sk-test", "gpt-4o", "https://api.openai.com/v1");
+    await engine.translate("how", "auto", "zh-CN", {
+      glossaryGuide: "- Kubernetes → keep original"
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse((init as RequestInit).body as string);
+    expect(body.messages[0].content).toContain("# Article-Specific Glossary Guide");
+    expect(body.messages[0].content).toContain("- Kubernetes → keep original");
+  });
 });

@@ -52,7 +52,8 @@ export function createOpenAIEngine(
         customPrompt,
         sourceLang,
         targetLang,
-        options?.domainPrompt
+        options?.domainPrompt,
+        options?.glossaryGuide
       );
       const userPrompt = buildUserPrompt(text, sourceLang, targetLang);
       return callOpenAIAPI(apiKey, baseUrl, model, systemPrompt, userPrompt);
@@ -88,7 +89,8 @@ function buildSystemPrompt(
   customPrompt: string | undefined,
   sourceLang: string,
   targetLang: string,
-  domainPrompt?: string
+  domainPrompt?: string,
+  glossaryGuide?: string
 ): string {
   const template = runtimePrompt || customPrompt || DEFAULT_SYSTEM_PROMPT;
   const prompt = template
@@ -96,11 +98,20 @@ function buildSystemPrompt(
     .replace(/\{\{source_lang\}\}/g, sourceLang)
     .replace(/\{\{domain_prompt\}\}/g, domainPrompt ?? "");
 
+  let result: string;
+
   if (domainPrompt && !template.includes("{{domain_prompt}}")) {
-    return `${prompt}\n\n${domainPrompt}`.trim();
+    result = `${prompt}\n\n${domainPrompt}`.trim();
+  } else {
+    result = prompt.trim();
   }
 
-  return prompt.trim();
+  // Append glossary guide if provided
+  if (glossaryGuide?.trim()) {
+    result += `\n\n# Article-Specific Glossary Guide\n\n${glossaryGuide.trim()}`;
+  }
+
+  return result;
 }
 
 function buildUserPrompt(text: string, sourceLang: string, targetLang: string): string {
