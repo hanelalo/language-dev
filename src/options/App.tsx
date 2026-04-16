@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { DEFAULT_SETTINGS, type Settings } from "../shared/storage-schema";
 import { getSettings, saveSettings, getEngineConfig, saveEngineConfig, getCustomApis, saveCustomApi, deleteCustomApi, getDomains, saveDomain, deleteDomain, type CustomLLMConfig, type Domain } from "../background/config-store";
 import { BUILTIN_DOMAINS } from "../background/config-store";
+import { DEFAULT_SYSTEM_PROMPT } from "../background/engines/openai-engine";
 
 // 清新自然风格配色
 const colors = {
@@ -520,13 +521,18 @@ export function OptionsApp() {
             <span style={{ fontSize: 11, color: colors.textSecondary }}>支持 {"{{target_lang}}"}, {"{{source_lang}}"}</span>
           </div>
           <textarea
-            value={settings.systemPrompt || ""}
+            value={settings.systemPrompt || DEFAULT_SYSTEM_PROMPT}
             onChange={(e) => setSettings({ ...settings, systemPrompt: e.target.value })}
-            placeholder={"You are a professional translator. Translate the following text to {{target_lang}}.\n\nRequirements:\n- Maintain the original tone and style\n- Preserve technical terms and abbreviations"}
-            style={{ ...styles.input, minHeight: 100, resize: "vertical" as const }}
+            style={{ ...styles.input, minHeight: 200, resize: "vertical" as const }}
           />
-          <p style={{ fontSize: 11, color: colors.textSecondary, marginTop: 4 }}>
-            {settings.systemPrompt ? "已设置自定义提示词模板" : "使用默认提示词模板"}
+          <p style={{ fontSize: 11, color: colors.textSecondary, marginTop: 4, display: "flex", alignItems: "center", gap: 8 }}>
+            <span>{settings.systemPrompt ? "已设置自定义提示词模板" : "使用默认提示词模板"}</span>
+            {settings.systemPrompt && (
+              <button
+                onClick={() => setSettings({ ...settings, systemPrompt: "" })}
+                style={{ background: "none", border: "none", color: colors.primary, cursor: "pointer", fontSize: 11, padding: 0, textDecoration: "underline" }}
+              >恢复默认</button>
+            )}
           </p>
         </div>
 
