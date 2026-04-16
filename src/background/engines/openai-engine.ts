@@ -135,6 +135,10 @@ async function callOpenAIAPI(
     ? baseUrl
     : `${baseUrl.replace(/\/+$/, "")}/chat/completions`;
 
+  console.log("[WPT OpenAI] request:", endpoint, "model:", model);
+  console.log("[WPT OpenAI] system prompt:", systemPrompt);
+  console.log("[WPT OpenAI] user message:", userText);
+
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -153,9 +157,12 @@ async function callOpenAIAPI(
 
   if (!response.ok) {
     const error = await response.text();
+    console.error("[WPT OpenAI] error:", response.status, error);
     throw new Error(`OpenAI API error: ${response.status} - ${error}`);
   }
 
   const data = await response.json();
-  return data.choices[0].message.content.trim();
+  const result = data.choices[0].message.content.trim();
+  console.log("[WPT OpenAI] response:", result);
+  return result;
 }

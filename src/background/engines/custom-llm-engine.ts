@@ -106,6 +106,10 @@ async function callCustomLLMAPI(
     ? baseUrl
     : `${baseUrl.replace(/\/+$/, "")}/chat/completions`;
 
+  console.log("[WPT CustomLLM] request:", endpoint, "model:", model);
+  console.log("[WPT CustomLLM] system prompt:", systemPrompt);
+  console.log("[WPT CustomLLM] user message:", userText);
+
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -124,9 +128,12 @@ async function callCustomLLMAPI(
 
   if (!response.ok) {
     const error = await response.text();
+    console.error("[WPT CustomLLM] error:", response.status, error);
     throw new Error(`Custom LLM API error: ${response.status} - ${error}`);
   }
 
   const data = await response.json();
-  return data.choices[0].message.content.trim();
+  const result = data.choices[0].message.content.trim();
+  console.log("[WPT CustomLLM] response:", result);
+  return result;
 }

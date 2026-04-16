@@ -22,7 +22,7 @@ describe("glossary-prescan", () => {
   describe("buildGlossarySystemPrompt", () => {
     it("replaces {{target_lang}} in system prompt", () => {
       const prompt = buildGlossarySystemPrompt("zh-CN");
-      expect(prompt).toContain("Target language: zh-CN");
+      expect(prompt).toContain("to zh-CN");
       expect(prompt).not.toContain("{{target_lang}}");
     });
   });

@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS, type Settings } from "../shared/storage-schema";
 import { getSettings, saveSettings, getEngineConfig, saveEngineConfig, getCustomApis, saveCustomApi, deleteCustomApi, getDomains, saveDomain, deleteDomain, type CustomLLMConfig, type Domain } from "../background/config-store";
 import { BUILTIN_DOMAINS } from "../background/config-store";
 import { DEFAULT_SYSTEM_PROMPT } from "../background/engines/openai-engine";
+import { GLOSSARY_SYSTEM_PROMPT } from "../background/glossary-prescan";
 
 // 清新自然风格配色
 const colors = {
@@ -551,6 +552,29 @@ export function OptionsApp() {
         <p style={{ fontSize: 11, color: colors.textSecondary, marginTop: -12, marginBottom: 16 }}>
           翻译文章时，先扫描全文生成术语表以确保翻译一致性（仅 LLM 引擎生效）
         </p>
+
+        {settings.glossaryPreScan && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <label style={styles.label}>术语表预扫描提示词</label>
+              <span style={{ fontSize: 11, color: colors.textSecondary }}>支持 {"{{target_lang}}"}</span>
+            </div>
+            <textarea
+              value={settings.glossaryPrompt || GLOSSARY_SYSTEM_PROMPT}
+              onChange={(e) => setSettings({ ...settings, glossaryPrompt: e.target.value })}
+              style={{ ...styles.input, minHeight: 200, resize: "vertical" as const }}
+            />
+            <p style={{ fontSize: 11, color: colors.textSecondary, marginTop: 4, display: "flex", alignItems: "center", gap: 8 }}>
+              <span>{settings.glossaryPrompt ? "已设置自定义术语表提示词" : "使用默认术语表提示词"}</span>
+              {settings.glossaryPrompt && (
+                <button
+                  onClick={() => setSettings({ ...settings, glossaryPrompt: "" })}
+                  style={{ background: "none", border: "none", color: colors.primary, cursor: "pointer", fontSize: 11, padding: 0, textDecoration: "underline" }}
+                >恢复默认</button>
+              )}
+            </p>
+          </div>
+        )}
 
         <div style={{ marginTop: 16 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>

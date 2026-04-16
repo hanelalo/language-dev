@@ -118,7 +118,7 @@ export async function handleArticleTranslateBatch(
         glossaryUserMsg,
         sourceLang,
         targetLang,
-        { systemPrompt: buildGlossarySystemPrompt(targetLang) }
+        { systemPrompt: buildGlossarySystemPrompt(targetLang, settings.glossaryPrompt) }
       );
     } catch {
       // Pre-scan failed — fall back to normal translation without glossary

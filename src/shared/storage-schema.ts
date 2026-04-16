@@ -6,6 +6,7 @@ export type Settings = {
   currentDomain: string;
   systemPrompt?: string; // 自定义系统提示词模板，支持 {{target_lang}}, {{source_lang}}
   glossaryPreScan?: boolean;
+  glossaryPrompt?: string; // 自定义术语表预扫描提示词模板，支持 {{target_lang}}
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -16,5 +17,6 @@ export const DEFAULT_SETTINGS: Settings = {
   currentDomain: "it",
   systemPrompt: "",
   glossaryPreScan: false,
+  glossaryPrompt: "",
 };
 
