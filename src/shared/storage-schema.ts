@@ -5,6 +5,7 @@ export type Settings = {
   selectionTranslate: boolean;
   currentDomain: string;
   systemPrompt?: string; // 自定义系统提示词模板，支持 {{target_lang}}, {{source_lang}}
+  glossaryPreScan?: boolean;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -14,5 +15,6 @@ export const DEFAULT_SETTINGS: Settings = {
   selectionTranslate: true,
   currentDomain: "it",
   systemPrompt: "",
+  glossaryPreScan: false,
 };
 
