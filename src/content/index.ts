@@ -6,7 +6,8 @@ declare global {
   }
 }
 
-import { extractSegments } from "./dom-extractor";
+import { extractSegments, extractArticleSegments, findTitleSegment, markDocumentNodes } from "./dom-extractor";
+import { detectArticle } from "./article-detector";
 import {
   hasCompletedTranslations,
   isTranslationVisible,
@@ -290,7 +291,23 @@ export async function runPageTranslationFlow(): Promise<{ total: number; complet
   updateFloatingToggleLabel();
 
   try {
-    segments = extractSegments();
+    const article = detectArticle();
+    if (article) {
+      markDocumentNodes();
+      const marked = detectArticle();
+      if (marked) {
+        segments = extractArticleSegments(marked.contentHTML);
+        const existingTexts = new Set(segments.map((s) => s.text));
+        const titleSeg = findTitleSegment(article.title, existingTexts);
+        if (titleSeg) {
+          segments.unshift(titleSeg);
+        }
+      } else {
+        segments = extractSegments();
+      }
+    } else {
+      segments = extractSegments();
+    }
 
     if (segments.length === 0) {
       return { total: 0, completed: 0, failed: 0 };
