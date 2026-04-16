@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createOpenAIEngine } from "../../src/background/engines/openai-engine";
+import { createOpenAIEngine, DEFAULT_SYSTEM_PROMPT } from "../../src/background/engines/openai-engine";
 
 describe("OpenAI Engine", () => {
   afterEach(() => {
@@ -59,5 +59,16 @@ describe("OpenAI Engine", () => {
 
     const [url] = fetchMock.mock.calls[0];
     expect(url).toBe("https://api.openai.com/v1/chat/completions");
+  });
+
+  it("DEFAULT_SYSTEM_PROMPT has structured markdown format with required sections", () => {
+    expect(DEFAULT_SYSTEM_PROMPT).toContain("# Role");
+    expect(DEFAULT_SYSTEM_PROMPT).toContain("# Task");
+    expect(DEFAULT_SYSTEM_PROMPT).toContain("# Rules");
+    expect(DEFAULT_SYSTEM_PROMPT).toContain("# Constraints");
+    expect(DEFAULT_SYSTEM_PROMPT).toContain("# Examples");
+    expect(DEFAULT_SYSTEM_PROMPT).toContain("{{target_lang}}");
+    expect(DEFAULT_SYSTEM_PROMPT).toContain("{{source_lang}}");
+    expect(DEFAULT_SYSTEM_PROMPT).toContain("Preserve the original meaning precisely");
   });
 });
