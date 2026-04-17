@@ -13,6 +13,9 @@ const chrome = {
         callback?.();
       }),
     },
+    onChanged: {
+      addListener: vi.fn(),
+    },
   },
 };
 
