@@ -235,13 +235,15 @@ export function findTitleSegment(title: string, existingTexts: Set<string>): Seg
   for (const heading of headings) {
     if (heading.closest("nav, [role='navigation']")) continue;
     if (heading.textContent?.trim() === trimmedTitle) {
+      const textNode = findMatchingTextNode(heading, trimmedTitle);
       return {
         segmentId: "wpt-seg-article-title",
         text: trimmedTitle,
-        xpath: getXPath(heading),
+        xpath: textNode ? getTextNodeXPath(textNode) : getXPath(heading),
         order: -1,
         element: heading,
-        renderMode: "append"
+        node: textNode,
+        renderMode: textNode ? "replace" : "append"
       };
     }
   }

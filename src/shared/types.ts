@@ -20,6 +20,7 @@ export interface TranslateEngine {
 export type TranslateOptions = {
   systemPrompt?: string; // 自定义系统提示词模板
   domainPrompt?: string; // 领域提示词
-  userInstruction?: string;
   glossaryGuide?: string;
+  /** When set, used directly as the user message instead of the default translation wrapper. */
+  rawUserMessage?: string;
 };

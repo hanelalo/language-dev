@@ -290,6 +290,8 @@ async function doTranslate(
       payload: { texts: [source] },
     });
 
+    // Selection translate uses global source/target lang from settings (no per-page override)
+
     if (response.success && response.data.results[0].status === "ok") {
       const result = response.data.results[0];
       translatedDiv.textContent = "";

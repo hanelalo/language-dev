@@ -5,6 +5,7 @@ export type SegmentResult =
 export type RetryOptions = {
   maxRetries?: number;
   baseDelayMs?: number;
+  concurrency?: number;
 };
 
 async function sleep(ms: number): Promise<void> {
@@ -36,23 +37,39 @@ async function translateWithRetry(
   return { status: "failed", error: lastError };
 }
 
+async function runWithConcurrency<T>(
+  items: T[],
+  fn: (item: T) => Promise<SegmentResult>,
+  concurrency: number
+): Promise<SegmentResult[]> {
+  const results: SegmentResult[] = new Array(items.length);
+  let nextIndex = 0;
+
+  async function runNext(): Promise<void> {
+    while (nextIndex < items.length) {
+      const i = nextIndex++;
+      results[i] = await fn(items[i]);
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => runNext());
+  await Promise.all(workers);
+  return results;
+}
+
 export async function runBatchTranslateWithRetry(
   texts: string[],
   worker: (text: string) => Promise<string>,
   options: RetryOptions = {}
 ): Promise<SegmentResult[]> {
-  const { maxRetries = 2, baseDelayMs = 500 } = options;
+  const { maxRetries = 2, baseDelayMs = 500, concurrency = 5 } = options;
 
-  const results = await Promise.all(
-    texts.map((text) => translateWithRetry(text, worker, maxRetries, baseDelayMs))
-  );
-
-  return results;
+  return runWithConcurrency(texts, (text) => translateWithRetry(text, worker, maxRetries, baseDelayMs), concurrency);
 }
 
 export async function runBatchTranslate(
   texts: string[],
   worker: (text: string) => Promise<string>
 ): Promise<SegmentResult[]> {
-  return runBatchTranslateWithRetry(texts, worker, { maxRetries: 0 });
+  return runBatchTranslateWithRetry(texts, worker, { maxRetries:0 });
 }
