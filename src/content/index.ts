@@ -103,18 +103,9 @@ export function computeTooltipPosition(
   );
 
   // 优先选距离最近的有效位置；无有效位置时退化为选最近的（宁可溢出不遮挡选词）
-  // 按优先级排序：优先考虑上下位置，再考虑左右位置
-  const sortedPool = (valid.length > 0 ? valid : candidates).sort((a, b) => {
-    // 计算每个候选位置的优先级分数
-    const getPriorityScore = (c: typeof a) => {
-      // 检查是否是上下位置（candidates 数组中前两个）
-      const isVertical = candidates.indexOf(c) < 2;
-      // 垂直位置优先：距离 + (水平位置 ? 1000 : 0)
-      return c.dist + (isVertical ? 0 : 1000);
-    };
-    return getPriorityScore(a) - getPriorityScore(b);
-  });
-  return { left: sortedPool[0].left, top: sortedPool[0].top };
+  const pool = valid.length > 0 ? valid : candidates;
+  pool.sort((a, b) => a.dist - b.dist);
+  return { left: pool[0].left, top: pool[0].top };
 }
 
 // 配色与 popup 风格一致

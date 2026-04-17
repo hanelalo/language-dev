@@ -61,17 +61,18 @@ describe("computeTooltipPosition", () => {
     expect(pos.left).toBe(340);
   });
 
-  it("clamps tooltip left edge when it would overflow left", () => {
+  it("chooses closest valid position (right) when selection is near left edge", () => {
     Object.defineProperty(window, "innerWidth", { value: 1000, configurable: true });
     Object.defineProperty(window, "innerHeight", { value: 800, configurable: true });
 
     const tooltip = makeTooltip(200, 100);
-    const rect = makeRect(20, 400, 80, 20);
+    const rect = makeRect(20, 400, 80, 20); // selection near left edge
 
     const pos = computeTooltipPosition(tooltip, rect);
 
-    // Above: left = 60 - 100 = -40, clamped to 8
-    expect(pos.left).toBe(8);
-    expect(pos.top).toBe(292);
+    // Right candidate (dist=8) is closer than above (dist≈48.7)
+    // Right: left = 100 + 8 = 108, top = clamp(410-50, 8, 692) = 360
+    expect(pos.left).toBe(108);
+    expect(pos.top).toBe(360);
   });
 });
