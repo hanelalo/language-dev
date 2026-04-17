@@ -19,16 +19,61 @@ export function parseTranslationArray(raw: string, expectedCount: number): Parse
     return { ok: false, error: `Expected array, got ${typeof parsed}` };
   }
 
-  if (parsed.length !== expectedCount) {
-    const validItems = toValidStringArray(parsed);
+  // Try object format: [{"index": 1, "text": "..."}, ...]
+  const objectResult = tryParseObjectArray(parsed, expectedCount);
+  if (objectResult !== null) return objectResult;
+
+  // Fallback: string array format: ["...", "..."]
+  return tryParseStringArray(parsed, expectedCount);
+}
+
+function tryParseObjectArray(arr: unknown[], expectedCount: number): ParseResult | null {
+  if (arr.length === 0 || typeof arr[0] !== "object" || arr[0] === null || !("index" in arr[0] && "text" in arr[0])) {
+    return null;
+  }
+
+  const entries: { index: number; text: string }[] = [];
+  for (const item of arr) {
+    if (
+      typeof item !== "object" || item === null ||
+      typeof (item as Record<string, unknown>).index !== "number" ||
+      typeof (item as Record<string, unknown>).text !== "string" ||
+      (item as Record<string, unknown>).text === ""
+    ) {
+      const partial = entries.sort((a, b) => a.index - b.index).map(e => e.text);
+      return {
+        ok: false,
+        error: "Array contains invalid object entries",
+        partial: partial.length > 0 ? partial : undefined,
+      };
+    }
+    entries.push({ index: (item as Record<string, unknown>).index as number, text: (item as Record<string, unknown>).text as string });
+  }
+
+  if (entries.length !== expectedCount) {
+    const partial = entries.sort((a, b) => a.index - b.index).map(e => e.text);
     return {
       ok: false,
-      error: `Expected array length ${expectedCount}, got ${parsed.length}`,
+      error: `Expected ${expectedCount} items, got ${entries.length}`,
+      partial: partial.length > 0 ? partial : undefined,
+    };
+  }
+
+  entries.sort((a, b) => a.index - b.index);
+  return { ok: true, items: entries.map(e => e.text) };
+}
+
+function tryParseStringArray(arr: unknown[], expectedCount: number): ParseResult {
+  if (arr.length !== expectedCount) {
+    const validItems = toValidStringArray(arr);
+    return {
+      ok: false,
+      error: `Expected array length ${expectedCount}, got ${arr.length}`,
       partial: validItems.length > 0 ? validItems : undefined,
     };
   }
 
-  const items = toValidStringArray(parsed);
+  const items = toValidStringArray(arr);
   if (items.length !== expectedCount) {
     return {
       ok: false,

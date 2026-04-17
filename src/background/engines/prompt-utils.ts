@@ -48,21 +48,21 @@ export function buildBatchUserPrompt(
   sourceLang: string,
   targetLang: string
 ): string {
-  const numberedTexts = texts
-    .map((text, i) => `${i + 1}. ${text}`)
-    .join("\n");
+  const inputJson = JSON.stringify(
+    texts.map((text, i) => ({ index: i + 1, text }))
+  );
 
   return [
     `Translate the following texts from ${sourceLang} to ${targetLang}.`,
     "",
-    `Return ONLY a JSON array of translated strings. No explanation, no markdown, no extra text.`,
-    `The array must have exactly ${texts.length} elements, in the same order as the input.`,
+    `Return ONLY a JSON array of objects with "index" and "text" fields. No explanation, no markdown, no extra text.`,
+    `The array must have exactly ${texts.length} elements. Keep the "index" values unchanged, translate only the "text" field.`,
     "",
     `Example output format:`,
-    `["translated1", "translated2", "translated3"]`,
+    `[{"index": 1, "text": "translated1"}, {"index": 2, "text": "translated2"}]`,
     "",
-    `Input texts:`,
-    numberedTexts,
+    `Input:`,
+    inputJson,
     "",
     `Output:`,
   ].join("\n");

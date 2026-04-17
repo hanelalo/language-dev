@@ -93,7 +93,7 @@ describe("OpenAI Engine", () => {
 
   describe("batchTranslate", () => {
     it("sends all texts in a single request with batch prompt", async () => {
-      const batchContent = JSON.stringify(["你好", "世界"]);
+      const batchContent = JSON.stringify([{"index": 1, "text": "你好"}, {"index": 2, "text": "世界"}]);
       const message = { message: { content: batchContent } };
       const fetchMock = vi.spyOn(globalThis, "fetch" as any).mockResolvedValue({
         ok: true,
@@ -105,8 +105,10 @@ describe("OpenAI Engine", () => {
 
       expect(fetchMock).toHaveBeenCalledOnce();
       const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
-      expect(body.messages[1].content).toContain("1. hello");
-      expect(body.messages[1].content).toContain("2. world");
+      expect(body.messages[1].content).toContain('"index":1');
+      expect(body.messages[1].content).toContain('"text":"hello"');
+      expect(body.messages[1].content).toContain('"index":2');
+      expect(body.messages[1].content).toContain('"text":"world"');
       expect(results).toEqual(["你好", "世界"]);
     });
 
@@ -123,7 +125,7 @@ describe("OpenAI Engine", () => {
     });
 
     it("throws when array length mismatches", async () => {
-      const shortBatch = JSON.stringify(["你好"]);
+      const shortBatch = JSON.stringify([{"index": 1, "text": "你好"}]);
       const message = { message: { content: shortBatch } };
       vi.spyOn(globalThis, "fetch" as any).mockResolvedValue({
         ok: true,
