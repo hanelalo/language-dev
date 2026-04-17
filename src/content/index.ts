@@ -30,6 +30,8 @@ const FLOATING_POSITION_KEY = "wpt-floating-position-v1";
 let selectionTooltip: HTMLElement | null = null;
 // 防止重复创建 tooltip
 let isCreatingTooltip = false;
+// Cached selection translate setting
+let selectionTranslateEnabled = true;
 
 function escapeHtml(str: string): string {
   return str
@@ -471,8 +473,22 @@ if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
   });
 }
 
+// Read selectionTranslate setting and listen for changes
+chrome.storage.local.get("settings", (result) => {
+  if (result.settings?.selectionTranslate !== undefined) {
+    selectionTranslateEnabled = result.settings.selectionTranslate;
+  }
+});
+
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.settings?.newValue?.selectionTranslate !== undefined) {
+    selectionTranslateEnabled = changes.settings.newValue.selectionTranslate;
+  }
+});
+
 // Listen for text selection to trigger selection translation
 document.addEventListener("mouseup", () => {
+  if (!selectionTranslateEnabled) return;
   setTimeout(handleSelectionTranslate, 10);
 });
 
