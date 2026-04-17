@@ -39,6 +39,84 @@ function escapeHtml(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
+const TOOLTIP_POSITION_GAP = 8;
+
+export function computeTooltipPosition(
+  tooltip: HTMLElement,
+  selectionRect: DOMRect
+): { left: number; top: number } {
+  const tw = tooltip.offsetWidth;
+  const th = tooltip.offsetHeight;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const pad = TOOLTIP_POSITION_GAP;
+
+  const cx = selectionRect.left + selectionRect.width / 2;
+  const cy = selectionRect.top + selectionRect.height / 2;
+
+  type Candidate = { left: number; top: number; dist: number };
+  const candidates: Candidate[] = [];
+
+  // 上方：tooltip 水平居中，底部贴选词顶部上方
+  const leftTop = clamp(cx - tw / 2, pad, vw - tw - pad);
+  const topAbove = selectionRect.top - th - pad;
+  candidates.push({
+    left: leftTop,
+    top: topAbove,
+    dist: Math.hypot(leftTop + tw / 2 - cx, topAbove + th - selectionRect.top),
+  });
+
+  // 下方：tooltip 水平居中，顶部贴选词底部下方
+  const leftBot = clamp(cx - tw / 2, pad, vw - tw - pad);
+  const topBelow = selectionRect.bottom + pad;
+  candidates.push({
+    left: leftBot,
+    top: topBelow,
+    dist: Math.hypot(leftBot + tw / 2 - cx, topBelow - selectionRect.bottom),
+  });
+
+  // 左侧：tooltip 垂直居中，右侧贴选词左侧左方
+  const topLeft = clamp(cy - th / 2, pad, vh - th - pad);
+  const leftLeft = selectionRect.left - tw - pad;
+  candidates.push({
+    left: leftLeft,
+    top: topLeft,
+    dist: Math.hypot(leftLeft + tw - selectionRect.left, topLeft + th / 2 - cy),
+  });
+
+  // 右侧：tooltip 垂直居中，左侧贴选词右侧右方
+  const topRight = clamp(cy - th / 2, pad, vh - th - pad);
+  const leftRight = selectionRect.right + pad;
+  candidates.push({
+    left: leftRight,
+    top: topRight,
+    dist: Math.hypot(leftRight - selectionRect.right, topRight + th / 2 - cy),
+  });
+
+  // 过滤完全在视口内的候选位置
+  const valid = candidates.filter(
+    (c) =>
+      c.left >= pad &&
+      c.top >= pad &&
+      c.left + tw <= vw - pad &&
+      c.top + th <= vh - pad
+  );
+
+  // 优先选距离最近的有效位置；无有效位置时退化为选最近的（宁可溢出不遮挡选词）
+  // 按优先级排序：优先考虑上下位置，再考虑左右位置
+  const sortedPool = (valid.length > 0 ? valid : candidates).sort((a, b) => {
+    // 计算每个候选位置的优先级分数
+    const getPriorityScore = (c: typeof a) => {
+      // 检查是否是上下位置（candidates 数组中前两个）
+      const isVertical = candidates.indexOf(c) < 2;
+      // 垂直位置优先：距离 + (水平位置 ? 1000 : 0)
+      return c.dist + (isVertical ? 0 : 1000);
+    };
+    return getPriorityScore(a) - getPriorityScore(b);
+  });
+  return { left: sortedPool[0].left, top: sortedPool[0].top };
+}
+
 // 配色与 popup 风格一致
 const TOOLTIP_COLORS = {
   bg: "#F8FBF9",
