@@ -577,6 +577,15 @@ function observeTogglePresence(): void {
   toggleObserver.observe(document.body, { childList: true });
 }
 
+// Sync floating toggle position across tabs in real-time
+chrome.storage.onChanged.addListener((changes) => {
+  if (!changes[FLOATING_POSITION_KEY]?.newValue) return;
+  if (!floatingToggleEl) return;
+  const pos = changes[FLOATING_POSITION_KEY].newValue as { left?: string; top?: string };
+  if (pos.left) floatingToggleEl.style.left = pos.left;
+  if (pos.top) floatingToggleEl.style.top = pos.top;
+});
+
 function handleFloatingToggleClick(): void {
   if (floatingToggleEl?.dataset.dragged === "1") {
     floatingToggleEl.dataset.dragged = "0";
