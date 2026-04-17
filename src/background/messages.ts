@@ -122,9 +122,34 @@ export async function handleTranslateBatch(
     }
   }
 
-  // LLM engines: translate individually with concurrency control and retry.
+  // LLM engines: try structured batch first, then degrade to per-segment.
+  const options = { systemPrompt, domainPrompt, glossaryGuide };
+
+  // Attempt 1: structured batch
+  try {
+    const translations = await engine.batchTranslate(payload.texts, sourceLang, targetLang, options);
+    const results: SegmentResult[] = translations.map(
+      (text): SegmentResult => ({ status: "ok", text })
+    );
+    return { results };
+  } catch {
+    // Batch failed, continue to retry
+  }
+
+  // Attempt 2: retry batch once
+  try {
+    const translations = await engine.batchTranslate(payload.texts, sourceLang, targetLang, options);
+    const results: SegmentResult[] = translations.map(
+      (text): SegmentResult => ({ status: "ok", text })
+    );
+    return { results };
+  } catch {
+    // Batch retry failed, continue to degradation
+  }
+
+  // Degradation: per-segment translation with concurrency control and retry.
   const worker = async (text: string): Promise<string> => {
-    return engine.translate(text, sourceLang, targetLang, { systemPrompt, domainPrompt, glossaryGuide });
+    return engine.translate(text, sourceLang, targetLang, options);
   };
 
   const results = await runBatchTranslateWithRetry(payload.texts, worker, {
