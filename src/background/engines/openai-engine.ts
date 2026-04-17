@@ -1,5 +1,6 @@
 import type { TranslateEngine, TranslateOptions } from "../../shared/types";
-import { buildSystemPrompt, buildUserPrompt } from "./prompt-utils";
+import { buildSystemPrompt, buildUserPrompt, buildBatchUserPrompt } from "./prompt-utils";
+import { parseTranslationArray } from "../parse-json-response";
 
 const OPENAI_API_BASE_URL = "https://api.openai.com/v1";
 
@@ -66,13 +67,21 @@ export function createOpenAIEngine(
       targetLang: string,
       options?: TranslateOptions
     ): Promise<string[]> {
-      // Translate each text individually for better quality
-      const results: string[] = [];
-      for (const text of texts) {
-        const translated = await this.translate(text, sourceLang, targetLang, options);
-        results.push(translated);
+      const systemPrompt = buildSystemPrompt(
+        options?.systemPrompt,
+        customPrompt,
+        sourceLang,
+        targetLang,
+        options?.domainPrompt,
+        options?.glossaryGuide
+      );
+      const userPrompt = buildBatchUserPrompt(texts, sourceLang, targetLang);
+      const raw = await callOpenAIAPI(apiKey, baseUrl, model, systemPrompt, userPrompt);
+      const result = parseTranslationArray(raw, texts.length);
+      if (!result.ok) {
+        throw new Error(`Batch translation parse failed: ${result.error}`);
       }
-      return results;
+      return result.items;
     },
 
     isConfigured(): boolean {
