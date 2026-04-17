@@ -532,9 +532,31 @@ async function ensureFloatingToggle(): Promise<void> {
   setupFloatingDrag(btn);
   btn.addEventListener("click", handleFloatingToggleClick);
 
+  setupToggleObserver();
   floatingToggleEl = btn;
   updateFloatingToggleLabel();
   document.body.appendChild(btn);
+  observeTogglePresence();
+}
+
+let toggleObserver: MutationObserver | null = null;
+let recreateTimer: ReturnType<typeof setTimeout> | null = null;
+
+function setupToggleObserver(): void {
+  if (toggleObserver) return;
+  toggleObserver = new MutationObserver(() => {
+    if (document.getElementById(FLOATING_TOGGLE_ID)) return;
+    if (recreateTimer) clearTimeout(recreateTimer);
+    recreateTimer = setTimeout(() => {
+      recreateTimer = null;
+      ensureFloatingToggle();
+    }, 100);
+  });
+}
+
+function observeTogglePresence(): void {
+  if (!document.body || !toggleObserver) return;
+  toggleObserver.observe(document.body, { childList: true });
 }
 
 function handleFloatingToggleClick(): void {
