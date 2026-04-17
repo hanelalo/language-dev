@@ -498,7 +498,7 @@ async function ensureFloatingToggle(): Promise<void> {
   btn.style.padding = "0";
   btn.style.border = "none";
   btn.style.borderRadius = "50%";
-  btn.style.background = "transparent";
+  btn.style.background = "rgba(16, 185, 129, 0.15)";
   btn.style.cursor = "grab";
   btn.style.boxShadow = "none";
   btn.style.userSelect = "none";
@@ -515,6 +515,13 @@ async function ensureFloatingToggle(): Promise<void> {
   img.style.height = "28px";
   img.style.pointerEvents = "none";
   btn.appendChild(img);
+
+  btn.addEventListener("mouseenter", () => {
+    btn.style.background = "rgba(16, 185, 129, 0.3)";
+  });
+  btn.addEventListener("mouseleave", () => {
+    btn.style.background = "rgba(16, 185, 129, 0.15)";
+  });
 
   applySavedPosition(btn);
   setupFloatingDrag(btn);
