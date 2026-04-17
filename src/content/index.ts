@@ -477,6 +477,11 @@ document.addEventListener("mouseup", () => {
 });
 
 ensureFloatingToggle();
+document.addEventListener("DOMContentLoaded", () => {
+  if (!document.getElementById(FLOATING_TOGGLE_ID)) {
+    ensureFloatingToggle();
+  }
+});
 
 // @crxjs/vite-plugin requires content scripts to export onExecute
 export function onExecute() {
