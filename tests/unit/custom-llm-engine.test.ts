@@ -60,5 +60,53 @@ describe("Custom LLM Engine", () => {
     expect(body.messages[0].content).toContain("# Article-Specific Glossary Guide");
     expect(body.messages[0].content).toContain("- K8s → keep original");
   });
+
+  describe("batchTranslate", () => {
+    it("sends all texts in a single request with batch prompt", async () => {
+      const fetchMock = vi.spyOn(globalThis, "fetch" as any).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: '["你好", "世界"]' } }]
+        })
+      } as Response);
+
+      const engine = createCustomLLMEngine("my-api", "sk-test", "gpt-4o-mini", "https://example.com/v1");
+      const results = await engine.batchTranslate(["hello", "world"], "en", "zh-CN");
+
+      expect(fetchMock).toHaveBeenCalledOnce();
+      const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+      expect(body.messages[1].content).toContain("1. hello");
+      expect(body.messages[1].content).toContain("2. world");
+      expect(results).toEqual(["你好", "世界"]);
+    });
+
+    it("throws on JSON parse failure", async () => {
+      vi.spyOn(globalThis, "fetch" as any).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: "not json at all" } }]
+        })
+      } as Response);
+
+      const engine = createCustomLLMEngine("my-api", "sk-test", "gpt-4o-mini", "https://example.com/v1");
+      await expect(
+        engine.batchTranslate(["hello"], "en", "zh-CN")
+      ).rejects.toThrow();
+    });
+
+    it("throws when array length mismatches", async () => {
+      vi.spyOn(globalThis, "fetch" as any).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: '["你好"]' } }]
+        })
+      } as Response);
+
+      const engine = createCustomLLMEngine("my-api", "sk-test", "gpt-4o-mini", "https://example.com/v1");
+      await expect(
+        engine.batchTranslate(["hello", "world"], "en", "zh-CN")
+      ).rejects.toThrow();
+    });
+  });
 });
 

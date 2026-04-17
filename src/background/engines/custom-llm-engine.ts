@@ -1,12 +1,13 @@
 import type { TranslateEngine, TranslateOptions } from "../../shared/types";
-import { buildSystemPrompt, buildUserPrompt } from "./prompt-utils";
+import { buildSystemPrompt, buildUserPrompt, buildBatchUserPrompt } from "./prompt-utils";
+import { parseTranslationArray } from "../parse-json-response";
 
 export function createCustomLLMEngine(
   name: string,
   apiKey: string,
   model: string,
   baseUrl: string,
-  customPrompt?: string
+  customPrompt?: string,
 ): TranslateEngine {
   return {
     name: `custom-llm-${name}`,
@@ -16,7 +17,7 @@ export function createCustomLLMEngine(
       text: string,
       sourceLang: string,
       targetLang: string,
-      options?: TranslateOptions
+      options?: TranslateOptions,
     ): Promise<string> {
       const systemPrompt = buildSystemPrompt(
         options?.systemPrompt,
@@ -24,9 +25,11 @@ export function createCustomLLMEngine(
         sourceLang,
         targetLang,
         options?.domainPrompt,
-        options?.glossaryGuide
+        options?.glossaryGuide,
       );
-      const userPrompt = options?.rawUserMessage ?? buildUserPrompt(text, sourceLang, targetLang);
+      const userPrompt =
+        options?.rawUserMessage ??
+        buildUserPrompt(text, sourceLang, targetLang);
       return callCustomLLMAPI(apiKey, baseUrl, model, systemPrompt, userPrompt);
     },
 
@@ -34,19 +37,28 @@ export function createCustomLLMEngine(
       texts: string[],
       sourceLang: string,
       targetLang: string,
-      options?: TranslateOptions
+      options?: TranslateOptions,
     ): Promise<string[]> {
-      const results: string[] = [];
-      for (const text of texts) {
-        const translated = await this.translate(text, sourceLang, targetLang, options);
-        results.push(translated);
+      const systemPrompt = buildSystemPrompt(
+        options?.systemPrompt,
+        customPrompt,
+        sourceLang,
+        targetLang,
+        options?.domainPrompt,
+        options?.glossaryGuide,
+      );
+      const userPrompt = buildBatchUserPrompt(texts, sourceLang, targetLang);
+      const raw = await callCustomLLMAPI(apiKey, baseUrl, model, systemPrompt, userPrompt);
+      const result = parseTranslationArray(raw, texts.length);
+      if (!result.ok) {
+        throw new Error(`Batch translation parse failed: ${result.error}`);
       }
-      return results;
+      return result.items;
     },
 
     isConfigured(): boolean {
       return !!apiKey && !!baseUrl;
-    }
+    },
   };
 }
 
@@ -55,7 +67,7 @@ async function callCustomLLMAPI(
   baseUrl: string,
   model: string,
   systemPrompt: string,
-  userText: string
+  userText: string,
 ): Promise<string> {
   const endpoint = baseUrl.endsWith("/chat/completions")
     ? baseUrl
@@ -77,7 +89,7 @@ async function callCustomLLMAPI(
         { role: "system", content: systemPrompt },
         { role: "user", content: userText },
       ],
-      temperature: 0.3,
+      temperature: 1,
     }),
   });
 
