@@ -42,3 +42,28 @@ export function buildUserPrompt(text: string, sourceLang: string, targetLang: st
     text
   ].join("\n");
 }
+
+export function buildBatchUserPrompt(
+  texts: string[],
+  sourceLang: string,
+  targetLang: string
+): string {
+  const numberedTexts = texts
+    .map((text, i) => `${i + 1}. ${text}`)
+    .join("\n");
+
+  return [
+    `Translate the following texts from ${sourceLang} to ${targetLang}.`,
+    "",
+    `Return ONLY a JSON array of translated strings. No explanation, no markdown, no extra text.`,
+    `The array must have exactly ${texts.length} elements, in the same order as the input.`,
+    "",
+    `Example output format:`,
+    `["translated1", "translated2", "translated3"]`,
+    "",
+    `Input texts:`,
+    numberedTexts,
+    "",
+    `Output:`,
+  ].join("\n");
+}
