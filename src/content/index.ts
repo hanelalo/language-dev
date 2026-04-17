@@ -121,7 +121,7 @@ const TOOLTIP_COLORS = {
   loading: "#9CA3AF",
 };
 
-function showSelectionTooltip(x: number, y: number, source: string, translated?: string, loading = false): void {
+function showSelectionTooltip(selectionRect: DOMRect, source: string, translated?: string, loading = false): void {
   // 防止重复创建：如果已有 tooltip 或正在创建中，直接返回
   if (isCreatingTooltip || selectionTooltip) {
     return;
@@ -133,8 +133,9 @@ function showSelectionTooltip(x: number, y: number, source: string, translated?:
   tooltip.id = "wpt-selection-tooltip";
   tooltip.style.cssText = `
     position: fixed;
-    left: ${x + 10}px;
-    top: ${y + 10}px;
+    left: 0;
+    top: 0;
+    visibility: hidden;
     background: ${TOOLTIP_COLORS.card};
     border: 1px solid ${TOOLTIP_COLORS.border};
     border-radius: 8px;
@@ -192,7 +193,7 @@ function showSelectionTooltip(x: number, y: number, source: string, translated?:
     btn.textContent = "翻译";
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      doTranslate(source, x, y, tooltip, sourceDiv, translatedDiv, btn);
+      doTranslate(source, tooltip, sourceDiv, translatedDiv, btn);
     });
     btn.addEventListener("mouseenter", () => {
       btn.style.background = TOOLTIP_COLORS.primaryHover;
@@ -217,6 +218,13 @@ function showSelectionTooltip(x: number, y: number, source: string, translated?:
   tooltip.appendChild(translatedDiv);
   tooltip.appendChild(footer);
   document.body.appendChild(tooltip);
+
+  // 智能定位：计算最佳位置并显示
+  const { left, top } = computeTooltipPosition(tooltip, selectionRect);
+  tooltip.style.left = `${left}px`;
+  tooltip.style.top = `${top}px`;
+  tooltip.style.visibility = "visible";
+
   selectionTooltip = tooltip;
 
   // 外部点击关闭
@@ -247,8 +255,6 @@ function showSelectionTooltip(x: number, y: number, source: string, translated?:
 
 async function doTranslate(
   source: string,
-  x: number,
-  y: number,
   tooltip: HTMLElement,
   sourceDiv: HTMLDivElement,
   translatedDiv: HTMLDivElement,
@@ -299,7 +305,7 @@ async function doTranslate(
       // 重新绑定点击事件
       btn.onclick = (e) => {
         e.stopPropagation();
-        doTranslate(source, x, y, tooltip, sourceDiv, translatedDiv, btn);
+        doTranslate(source, tooltip, sourceDiv, translatedDiv, btn);
       };
     }
   } catch {
@@ -314,7 +320,7 @@ async function doTranslate(
     // 重新绑定点击事件
     btn.onclick = (e) => {
       e.stopPropagation();
-      doTranslate(source, x, y, tooltip, sourceDiv, translatedDiv, btn);
+      doTranslate(source, tooltip, sourceDiv, translatedDiv, btn);
     };
   }
 }
@@ -351,7 +357,7 @@ function handleSelectionTranslate(): void {
   const range = selection.getRangeAt(0);
   const rect = range.getBoundingClientRect();
 
-  showSelectionTooltip(rect.left, rect.top, selectedText);
+  showSelectionTooltip(rect, selectedText);
 }
 
 export async function runPageTranslationFlow(): Promise<{ total: number; completed: number; failed: number }> {
