@@ -517,6 +517,43 @@ export function OptionsApp() {
         )}
 
         <div style={{ ...styles.field, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <label style={{ ...styles.label, marginBottom: 0 }}>划词翻译</label>
+          <label style={{ position: "relative", display: "inline-block", width: 44, height: 24, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={settings.selectionTranslate}
+              onChange={(e) => setSettings({ ...settings, selectionTranslate: e.target.checked })}
+              aria-label="划词翻译"
+              style={{ opacity: 0, width: 0, height: 0 }}
+            />
+            <span style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: settings.selectionTranslate ? colors.primary : colors.border,
+              borderRadius: 12,
+              transition: "background-color 0.2s",
+            }} />
+            <span style={{
+              position: "absolute",
+              top: 2,
+              left: settings.selectionTranslate ? 22 : 2,
+              width: 20,
+              height: 20,
+              backgroundColor: "#fff",
+              borderRadius: "50%",
+              transition: "left 0.2s",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+            }} />
+          </label>
+        </div>
+        <p style={{ fontSize: 11, color: colors.textSecondary, marginTop: -12, marginBottom: 16 }}>
+          选中文本后自动弹出翻译提示
+        </p>
+
+        <div style={{ ...styles.field, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <label style={{ ...styles.label, marginBottom: 0 }}>术语表预扫描</label>
           <label style={{ position: "relative", display: "inline-block", width: 44, height: 24, cursor: "pointer" }}>
             <input
