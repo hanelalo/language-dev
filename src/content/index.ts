@@ -33,6 +33,10 @@ let isCreatingTooltip = false;
 // Cached selection translate setting
 let selectionTranslateEnabled = true;
 
+// MutationObserver guard state
+let toggleObserver: MutationObserver | null = null;
+let recreateTimer: ReturnType<typeof setTimeout> | null = null;
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
@@ -554,9 +558,6 @@ async function ensureFloatingToggle(): Promise<void> {
   document.body.appendChild(btn);
   observeTogglePresence();
 }
-
-let toggleObserver: MutationObserver | null = null;
-let recreateTimer: ReturnType<typeof setTimeout> | null = null;
 
 function setupToggleObserver(): void {
   if (toggleObserver) return;
