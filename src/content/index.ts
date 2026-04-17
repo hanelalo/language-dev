@@ -30,6 +30,7 @@ const FLOATING_POSITION_KEY = "wpt-floating-position-v1";
 let selectionTooltip: HTMLElement | null = null;
 // 防止重复创建 tooltip
 let isCreatingTooltip = false;
+
 // Cached selection translate setting
 let selectionTranslateEnabled = true;
 
@@ -713,7 +714,9 @@ function applySavedPosition(btn: HTMLButtonElement): Promise<void> {
     if (!pos) return;
     if (pos.left) btn.style.left = pos.left;
     if (pos.top) btn.style.top = pos.top;
-    btn.style.top = `${clamp(btn.offsetTop, 12, window.innerHeight - btn.offsetHeight - 12)}px`;
+    const margin = 12;
+    btn.style.left = `${clamp(btn.offsetLeft, margin, window.innerWidth - btn.offsetWidth - margin)}px`;
+    btn.style.top = `${clamp(btn.offsetTop, margin, window.innerHeight - btn.offsetHeight - margin)}px`;
   }).catch(() => {
     // ignore storage errors
   });
