@@ -525,6 +525,7 @@ async function ensureFloatingToggle(): Promise<void> {
   btn.style.height = "28px";
   btn.style.padding = "0";
   btn.style.border = "none";
+  btn.style.outline = "none";
   btn.style.borderRadius = "50%";
   btn.style.background = "rgba(16, 185, 129, 0.15)";
   btn.style.cursor = "grab";
