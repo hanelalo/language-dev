@@ -6,6 +6,8 @@ export type CustomLLMConfig = {
   apiKey: string;
   baseUrl: string;
   model: string;
+  /** JSON string of extra fields to merge into the request body */
+  extraBody?: string;
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -22,7 +24,9 @@ export async function saveSettings(settings: Settings): Promise<void> {
   });
 }
 
-export async function getEngineConfig(engineName: string): Promise<Record<string, string>> {
+export async function getEngineConfig(
+  engineName: string,
+): Promise<Record<string, string>> {
   return new Promise((resolve) => {
     chrome.storage.local.get(["engines"], (result) => {
       resolve(result.engines?.[engineName] ?? {});
@@ -32,7 +36,7 @@ export async function getEngineConfig(engineName: string): Promise<Record<string
 
 export async function saveEngineConfig(
   engineName: string,
-  config: Record<string, string>
+  config: Record<string, string>,
 ): Promise<void> {
   return new Promise((resolve) => {
     chrome.storage.local.get(["engines"], (result) => {
@@ -55,7 +59,9 @@ export async function saveCustomApi(config: CustomLLMConfig): Promise<void> {
   return new Promise((resolve) => {
     chrome.storage.local.get(["customApis"], (result) => {
       const customApis = result.customApis ?? [];
-      const existingIndex = customApis.findIndex((api: CustomLLMConfig) => api.name === config.name);
+      const existingIndex = customApis.findIndex(
+        (api: CustomLLMConfig) => api.name === config.name,
+      );
       if (existingIndex >= 0) {
         customApis[existingIndex] = config;
       } else {
@@ -70,7 +76,9 @@ export async function deleteCustomApi(name: string): Promise<void> {
   return new Promise((resolve) => {
     chrome.storage.local.get(["customApis"], (result) => {
       const customApis = result.customApis ?? [];
-      const filtered = customApis.filter((api: CustomLLMConfig) => api.name !== name);
+      const filtered = customApis.filter(
+        (api: CustomLLMConfig) => api.name !== name,
+      );
       chrome.storage.local.set({ customApis: filtered }, resolve);
     });
   });
@@ -88,7 +96,7 @@ export async function getDomains(): Promise<Domain[]> {
     chrome.storage.local.get(["domains"], (result) => {
       // 初始化内置领域
       const stored = result.domains ?? [];
-      const builtinIds = BUILTIN_DOMAINS.map(d => d.id);
+      const builtinIds = BUILTIN_DOMAINS.map((d) => d.id);
       const hasBuiltin = (d: Domain) => builtinIds.includes(d.id);
 
       // 合并：使用存储的内置领域覆盖默认内置领域
@@ -98,7 +106,7 @@ export async function getDomains(): Promise<Domain[]> {
           merged.push(domain);
         } else {
           // 用存储的覆盖内置的（支持编辑内置领域）
-          const idx = merged.findIndex(d => d.id === domain.id);
+          const idx = merged.findIndex((d) => d.id === domain.id);
           if (idx >= 0) merged[idx] = domain;
         }
       }
@@ -422,20 +430,27 @@ export async function saveDomain(domain: Domain): Promise<void> {
   return new Promise((resolve) => {
     chrome.storage.local.get(["domains"], (result) => {
       const domains = result.domains ?? [];
-      const builtinIds = BUILTIN_DOMAINS.map(d => d.id);
+      const builtinIds = BUILTIN_DOMAINS.map((d) => d.id);
       const isBuiltin = builtinIds.includes(domain.id);
 
       if (isBuiltin) {
         // 内置领域只更新 prompt，保留 name
-        const existingIndex = domains.findIndex((d: Domain) => d.id === domain.id);
+        const existingIndex = domains.findIndex(
+          (d: Domain) => d.id === domain.id,
+        );
         if (existingIndex >= 0) {
-          domains[existingIndex] = { ...domains[existingIndex], prompt: domain.prompt };
+          domains[existingIndex] = {
+            ...domains[existingIndex],
+            prompt: domain.prompt,
+          };
         } else {
           domains.push({ ...domain, builtin: true });
         }
       } else {
         // 自定义领域完整更新
-        const existingIndex = domains.findIndex((d: Domain) => d.id === domain.id);
+        const existingIndex = domains.findIndex(
+          (d: Domain) => d.id === domain.id,
+        );
         if (existingIndex >= 0) {
           domains[existingIndex] = domain;
         } else {
@@ -451,13 +466,17 @@ export async function deleteDomain(id: string): Promise<void> {
   return new Promise((resolve) => {
     chrome.storage.local.get(["domains"], (result) => {
       const domains = result.domains ?? [];
-      const filtered = domains.filter((d: Domain) => d.id !== id && d.id !== "default");
+      const filtered = domains.filter(
+        (d: Domain) => d.id !== id && d.id !== "default",
+      );
       chrome.storage.local.set({ domains: filtered }, resolve);
     });
   });
 }
 
-export async function getDomainPrompt(domainId: string): Promise<string | null> {
+export async function getDomainPrompt(
+  domainId: string,
+): Promise<string | null> {
   return new Promise((resolve) => {
     chrome.storage.local.get(["domains"], (result) => {
       const domains = result.domains ?? [];

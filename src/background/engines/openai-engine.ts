@@ -1,5 +1,9 @@
 import type { TranslateEngine, TranslateOptions } from "../../shared/types";
-import { buildSystemPrompt, buildUserPrompt, buildBatchUserPrompt } from "./prompt-utils";
+import {
+  buildSystemPrompt,
+  buildUserPrompt,
+  buildBatchUserPrompt,
+} from "./prompt-utils";
 import { parseTranslationArray } from "../parse-json-response";
 
 const OPENAI_API_BASE_URL = "https://api.openai.com/v1";
@@ -37,7 +41,8 @@ export function createOpenAIEngine(
   apiKey: string,
   model: string = "gpt-4o",
   baseUrl: string = OPENAI_API_BASE_URL,
-  customPrompt?: string
+  customPrompt?: string,
+  extraBody?: Record<string, unknown>,
 ): TranslateEngine {
   return {
     name: "openai",
@@ -47,7 +52,7 @@ export function createOpenAIEngine(
       text: string,
       sourceLang: string,
       targetLang: string,
-      options?: TranslateOptions
+      options?: TranslateOptions,
     ): Promise<string> {
       const systemPrompt = buildSystemPrompt(
         options?.systemPrompt,
@@ -55,17 +60,26 @@ export function createOpenAIEngine(
         sourceLang,
         targetLang,
         options?.domainPrompt,
-        options?.glossaryGuide
+        options?.glossaryGuide,
       );
-      const userPrompt = options?.rawUserMessage ?? buildUserPrompt(text, sourceLang, targetLang);
-      return callOpenAIAPI(apiKey, baseUrl, model, systemPrompt, userPrompt);
+      const userPrompt =
+        options?.rawUserMessage ??
+        buildUserPrompt(text, sourceLang, targetLang);
+      return callOpenAIAPI(
+        apiKey,
+        baseUrl,
+        model,
+        systemPrompt,
+        userPrompt,
+        extraBody,
+      );
     },
 
     async batchTranslate(
       texts: string[],
       sourceLang: string,
       targetLang: string,
-      options?: TranslateOptions
+      options?: TranslateOptions,
     ): Promise<string[]> {
       const systemPrompt = buildSystemPrompt(
         options?.systemPrompt,
@@ -73,10 +87,17 @@ export function createOpenAIEngine(
         sourceLang,
         targetLang,
         options?.domainPrompt,
-        options?.glossaryGuide
+        options?.glossaryGuide,
       );
       const userPrompt = buildBatchUserPrompt(texts, sourceLang, targetLang);
-      const raw = await callOpenAIAPI(apiKey, baseUrl, model, systemPrompt, userPrompt);
+      const raw = await callOpenAIAPI(
+        apiKey,
+        baseUrl,
+        model,
+        systemPrompt,
+        userPrompt,
+        extraBody,
+      );
       const result = parseTranslationArray(raw, texts.length);
       if (!result.ok) {
         throw new Error(`Batch translation parse failed: ${result.error}`);
@@ -86,7 +107,7 @@ export function createOpenAIEngine(
 
     isConfigured(): boolean {
       return !!apiKey;
-    }
+    },
   };
 }
 
@@ -95,7 +116,8 @@ async function callOpenAIAPI(
   baseUrl: string,
   model: string,
   systemPrompt: string,
-  userText: string
+  userText: string,
+  extraBody?: Record<string, unknown>,
 ): Promise<string> {
   const endpoint = baseUrl.endsWith("/chat/completions")
     ? baseUrl
@@ -118,6 +140,7 @@ async function callOpenAIAPI(
         { role: "user", content: userText },
       ],
       temperature: 0.3,
+      ...(extraBody ?? {}),
     }),
   });
 

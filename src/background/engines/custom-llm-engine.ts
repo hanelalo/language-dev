@@ -1,5 +1,9 @@
 import type { TranslateEngine, TranslateOptions } from "../../shared/types";
-import { buildSystemPrompt, buildUserPrompt, buildBatchUserPrompt } from "./prompt-utils";
+import {
+  buildSystemPrompt,
+  buildUserPrompt,
+  buildBatchUserPrompt,
+} from "./prompt-utils";
 import { parseTranslationArray } from "../parse-json-response";
 
 export function createCustomLLMEngine(
@@ -8,6 +12,7 @@ export function createCustomLLMEngine(
   model: string,
   baseUrl: string,
   customPrompt?: string,
+  extraBody?: Record<string, unknown>,
 ): TranslateEngine {
   return {
     name: `custom-llm-${name}`,
@@ -30,7 +35,14 @@ export function createCustomLLMEngine(
       const userPrompt =
         options?.rawUserMessage ??
         buildUserPrompt(text, sourceLang, targetLang);
-      return callCustomLLMAPI(apiKey, baseUrl, model, systemPrompt, userPrompt);
+      return callCustomLLMAPI(
+        apiKey,
+        baseUrl,
+        model,
+        systemPrompt,
+        userPrompt,
+        extraBody,
+      );
     },
 
     async batchTranslate(
@@ -48,7 +60,14 @@ export function createCustomLLMEngine(
         options?.glossaryGuide,
       );
       const userPrompt = buildBatchUserPrompt(texts, sourceLang, targetLang);
-      const raw = await callCustomLLMAPI(apiKey, baseUrl, model, systemPrompt, userPrompt);
+      const raw = await callCustomLLMAPI(
+        apiKey,
+        baseUrl,
+        model,
+        systemPrompt,
+        userPrompt,
+        extraBody,
+      );
       const result = parseTranslationArray(raw, texts.length);
       if (!result.ok) {
         throw new Error(`Batch translation parse failed: ${result.error}`);
@@ -68,6 +87,7 @@ async function callCustomLLMAPI(
   model: string,
   systemPrompt: string,
   userText: string,
+  extraBody?: Record<string, unknown>,
 ): Promise<string> {
   const endpoint = baseUrl.endsWith("/chat/completions")
     ? baseUrl
@@ -90,6 +110,7 @@ async function callCustomLLMAPI(
         { role: "user", content: userText },
       ],
       temperature: 1,
+      ...(extraBody ?? {}),
     }),
   });
 

@@ -26,6 +26,7 @@ export function OptionsApp() {
   const [deeplPlan, setDeeplPlan] = useState<"free" | "pro">("pro");
   const [openaiKey, setOpenaiKey] = useState("");
   const [openaiModel, setOpenaiModel] = useState("gpt-4o");
+  const [openaiExtraBody, setOpenaiExtraBody] = useState("");
   const [customApis, setCustomApis] = useState<CustomLLMConfig[]>([]);
   const [editingApi, setEditingApi] = useState<CustomLLMConfig | null>(null);
   const [showApiDialog, setShowApiDialog] = useState(false);
@@ -51,6 +52,7 @@ export function OptionsApp() {
       if (deeplConfig.plan) setDeeplPlan(deeplConfig.plan as "free" | "pro");
       if (openaiConfig.apiKey) setOpenaiKey(openaiConfig.apiKey);
       if (openaiConfig.model) setOpenaiModel(openaiConfig.model);
+      if (openaiConfig.extraBody) setOpenaiExtraBody(openaiConfig.extraBody);
       setCustomApis(loadedCustomApis);
       setDomains(loadedDomains.length > 0 ? loadedDomains : BUILTIN_DOMAINS);
       setLoading(false);
@@ -62,7 +64,7 @@ export function OptionsApp() {
     await Promise.all([
       saveSettings(settings),
       saveEngineConfig("deepl", { apiKey: deeplKey, plan: deeplPlan }),
-      saveEngineConfig("openai", { apiKey: openaiKey, model: openaiModel }),
+      saveEngineConfig("openai", { apiKey: openaiKey, model: openaiModel, extraBody: openaiExtraBody }),
     ]);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -84,7 +86,7 @@ export function OptionsApp() {
   };
 
   const openAddApi = () => {
-    setEditingApi({ name: "", apiKey: "", baseUrl: "", model: "gpt-4o" });
+    setEditingApi({ name: "", apiKey: "", baseUrl: "", model: "gpt-4o", extraBody: "" });
     setShowApiDialog(true);
   };
 
@@ -336,6 +338,22 @@ export function OptionsApp() {
           </select>
         </div>
 
+        <div style={styles.field}>
+          <label style={styles.label}>
+            Extra Body（JSON，可选）
+            <span style={{ fontSize: 11, color: colors.textSecondary, fontWeight: 400, marginLeft: 8 }}>
+              例如关闭思考：{'{"thinking": {"type": "disabled"}}'}
+            </span>
+          </label>
+          <textarea
+            value={openaiExtraBody}
+            onChange={(e) => setOpenaiExtraBody(e.target.value)}
+            placeholder='{"top_p": 0.9, "frequency_penalty": 0.5}'
+            rows={3}
+            style={{ ...styles.input, resize: "vertical", fontFamily: "monospace", fontSize: 12, minHeight: 60 }}
+          />
+        </div>
+
         <div style={{ ...styles.field, marginTop: 24, paddingTop: 16, borderTop: `1px dashed ${colors.border}` }}>
           <label style={{ ...styles.label, color: colors.primary, fontWeight: 600 }}>自定义 LLM API（OpenAI 兼容）</label>
         </div>
@@ -418,6 +436,21 @@ export function OptionsApp() {
                 onChange={(e) => setEditingApi({ ...editingApi, model: e.target.value })}
                 placeholder="gpt-4o / claude-3-5-sonnet-latest 等"
                 style={styles.input}
+              />
+            </div>
+            <div style={styles.field}>
+              <label style={styles.label}>
+                Extra Body（JSON，可选）
+                <span style={{ fontSize: 11, color: colors.textSecondary, fontWeight: 400, marginLeft: 8 }}>
+                  例如关闭思考：{'{"thinking": {"type": "disabled"}}'}
+                </span>
+              </label>
+              <textarea
+                value={editingApi.extraBody ?? ""}
+                onChange={(e) => setEditingApi({ ...editingApi, extraBody: e.target.value })}
+                placeholder='{"top_p": 0.9}'
+                rows={3}
+                style={{ ...styles.input, resize: "vertical", fontFamily: "monospace", fontSize: 12, minHeight: 60 }}
               />
             </div>
             <div style={{ display: "flex", gap: 12, marginTop: 20 }}>

@@ -25,14 +25,52 @@ function ensureEnginesInitialized(): Promise<void> {
     ]);
 
     if (deeplConfig.apiKey) {
-      registerEngine(createDeepLEngine(deeplConfig.apiKey, (deeplConfig.plan as "free" | "pro") ?? "free"));
+      registerEngine(
+        createDeepLEngine(
+          deeplConfig.apiKey,
+          (deeplConfig.plan as "free" | "pro") ?? "free",
+        ),
+      );
     }
     if (openaiConfig.apiKey) {
-      registerEngine(createOpenAIEngine(openaiConfig.apiKey, openaiConfig.model ?? "gpt-4o"));
+      let openaiExtraBody: Record<string, unknown> | undefined;
+      if (openaiConfig.extraBody) {
+        try {
+          openaiExtraBody = JSON.parse(openaiConfig.extraBody);
+        } catch {
+          /* ignore malformed JSON */
+        }
+      }
+      registerEngine(
+        createOpenAIEngine(
+          openaiConfig.apiKey,
+          openaiConfig.model ?? "gpt-4o",
+          undefined,
+          undefined,
+          openaiExtraBody,
+        ),
+      );
     }
     for (const api of customApis) {
       if (api.apiKey && api.baseUrl) {
-        registerEngine(createCustomLLMEngine(api.name, api.apiKey, api.model, api.baseUrl));
+        let extraBody: Record<string, unknown> | undefined;
+        if (api.extraBody) {
+          try {
+            extraBody = JSON.parse(api.extraBody);
+          } catch {
+            /* ignore malformed JSON */
+          }
+        }
+        registerEngine(
+          createCustomLLMEngine(
+            api.name,
+            api.apiKey,
+            api.model,
+            api.baseUrl,
+            undefined,
+            extraBody,
+          ),
+        );
       }
     }
   })();
@@ -67,7 +105,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     // Forward to content script to start extraction
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]?.id) {
-        chrome.tabs.sendMessage(tabs[0].id, { type: MESSAGE_TYPES.START_PAGE_TRANSLATION });
+        chrome.tabs.sendMessage(tabs[0].id, {
+          type: MESSAGE_TYPES.START_PAGE_TRANSLATION,
+        });
       }
     });
   }
