@@ -84,6 +84,11 @@ export function hasCompletedTranslations(): boolean {
   return false;
 }
 
+export function isSegmentDone(segmentId: string): boolean {
+  const state = segmentStatesById.get(segmentId);
+  return state?.translatedText !== undefined;
+}
+
 function renderAppendSegment(state: SegmentState, translated: string, status: Status): void {
   const element = state.segment.element;
   if (!element) return;

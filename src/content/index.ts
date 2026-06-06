@@ -23,6 +23,14 @@ let segments: Segment[] = [];
 let isPageTranslating = false;
 let floatingToggleEl: HTMLButtonElement | null = null;
 
+// Lazy translation state
+let lazyObserver: IntersectionObserver | null = null;
+let lazyQueue: Segment[] = [];
+let lazyPendingIds = new Set<string>();
+let lazyCompletedIds = new Set<string>();
+let lazyTimer: ReturnType<typeof setTimeout> | null = null;
+let isLazyTranslating = false;
+
 const FLOATING_TOGGLE_ID = "wpt-page-toggle";
 const FLOATING_POSITION_KEY = "wpt-floating-position-v1";
 
@@ -374,6 +382,17 @@ export async function runPageTranslationFlow(): Promise<{ total: number; complet
   setTranslationVisibility(true);
   updateFloatingToggleLabel();
 
+  // Clean up previous lazy observer
+  if (lazyObserver) {
+    lazyObserver.disconnect();
+    lazyObserver = null;
+  }
+  lazyQueue = [];
+  lazyPendingIds = new Set();
+  lazyCompletedIds = new Set();
+  if (lazyTimer) clearTimeout(lazyTimer);
+  isLazyTranslating = false;
+
   try {
     const article = detectArticle();
     if (article) {
@@ -405,58 +424,160 @@ export async function runPageTranslationFlow(): Promise<{ total: number; complet
       articleText: segments.map(s => s.text).join("\n\n"),
     } : {};
 
-    // 先渲染所有"翻译中..."占位
-    for (const segment of segments) {
+    // Only translate visible segments (viewport + 20% buffer)
+    const visibleSegments = getVisibleSegments(segments, 20);
+    console.log(`[WPT] visible segments: ${visibleSegments.length} / ${segments.length} total`);
+
+    // Render placeholders for visible segments only
+    for (const segment of visibleSegments) {
       renderTranslationBlock(segment, "翻译中...", "pending");
     }
 
+    // Translate visible segments in batches
     let completed = 0;
     let failed = 0;
-
     const batchSize = 10;
-    for (let i = 0; i < segments.length; i += batchSize) {
-      const batch = segments.slice(i, i + batchSize);
-      const texts = batch.map((s) => s.text);
-
-      try {
-        const response = await chrome.runtime.sendMessage({
-          type: batchMessageType,
-          payload: { texts, ...articleContext },
-        });
-
-        if (response.success) {
-          const { results } = response.data;
-
-          for (let j = 0; j < batch.length; j++) {
-            const segment = batch[j];
-            const result = results[j];
-
-            if (result.status === "ok") {
-              updateSegmentStatus(segment.segmentId, "done", result.text);
-              completed++;
-            } else {
-              updateSegmentStatus(segment.segmentId, "failed", "[翻译失败]");
-              failed++;
-            }
-          }
-        } else {
-          for (const segment of batch) {
-            updateSegmentStatus(segment.segmentId, "failed", "[翻译失败]");
-            failed++;
-          }
-        }
-      } catch {
-        for (const segment of batch) {
-          updateSegmentStatus(segment.segmentId, "failed", "[翻译失败]");
-          failed++;
-        }
+    for (let i = 0; i < visibleSegments.length; i += batchSize) {
+      const batch = visibleSegments.slice(i, i + batchSize);
+      const result = await translateBatch(batch, batchMessageType, articleContext);
+      completed += result.completed;
+      failed += result.failed;
+      // Mark as processed so lazy observer skips them
+      for (const seg of batch) {
+        lazyCompletedIds.add(seg.segmentId);
       }
     }
+
+    // Set up IntersectionObserver for remaining segments
+    setupLazyObserver(segments, batchMessageType, articleContext);
 
     return { total: segments.length, completed, failed };
   } finally {
     isPageTranslating = false;
     updateFloatingToggleLabel();
+  }
+}
+
+/** Filter segments whose DOM elements are within the viewport + buffer. */
+function getVisibleSegments(allSegments: Segment[], bufferPercent: number): Segment[] {
+  const viewHeight = window.innerHeight;
+  const margin = viewHeight * bufferPercent / 100;
+
+  return allSegments.filter(s => {
+    if (!s.element) return false;
+    const rect = s.element.getBoundingClientRect();
+    return rect.bottom >= -margin && rect.top <= viewHeight + margin;
+  });
+}
+
+/** Translate a single batch of segments via background message. */
+async function translateBatch(
+  batch: Segment[],
+  batchMessageType: string,
+  articleContext: Record<string, string>,
+): Promise<{ completed: number; failed: number }> {
+  const texts = batch.map(s => s.text);
+  let completed = 0;
+  let failed = 0;
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: batchMessageType,
+      payload: { texts, ...articleContext },
+    });
+
+    if (response.success) {
+      const { results } = response.data;
+      for (let j = 0; j < batch.length; j++) {
+        const segment = batch[j];
+        const result = results[j];
+        if (result.status === "ok") {
+          updateSegmentStatus(segment.segmentId, "done", result.text);
+          completed++;
+        } else {
+          updateSegmentStatus(segment.segmentId, "failed", "[翻译失败]");
+          failed++;
+        }
+      }
+    } else {
+      for (const segment of batch) {
+        updateSegmentStatus(segment.segmentId, "failed", "[翻译失败]");
+        failed++;
+      }
+    }
+  } catch {
+    for (const segment of batch) {
+      updateSegmentStatus(segment.segmentId, "failed", "[翻译失败]");
+      failed++;
+    }
+  }
+
+  return { completed, failed };
+}
+
+/** Set up IntersectionObserver to lazily translate segments as they scroll into view. */
+function setupLazyObserver(
+  allSegments: Segment[],
+  batchMessageType: string,
+  articleContext: Record<string, string>,
+): void {
+  if (lazyObserver) {
+    lazyObserver.disconnect();
+  }
+
+  lazyObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+
+        const segment = allSegments.find(s => s.element === entry.target);
+        if (!segment) continue;
+
+        // Skip if already processed or queued
+        if (lazyCompletedIds.has(segment.segmentId)) continue;
+        if (lazyPendingIds.has(segment.segmentId)) continue;
+
+        lazyQueue.push(segment);
+        lazyPendingIds.add(segment.segmentId);
+
+        // Render placeholder so user knows it's being translated
+        renderTranslationBlock(segment, "翻译中...", "pending");
+      }
+
+      // Debounce queue flush
+      if (lazyTimer) clearTimeout(lazyTimer);
+      lazyTimer = setTimeout(() => flushLazyQueue(batchMessageType, articleContext), 300);
+    },
+    { rootMargin: "20% 0px 20% 0px" },
+  );
+
+  // Observe all segment elements
+  for (const segment of allSegments) {
+    if (segment.element) {
+      lazyObserver.observe(segment.element);
+    }
+  }
+}
+
+/** Process the lazy translation queue in batches until empty. */
+async function flushLazyQueue(
+  batchMessageType: string,
+  articleContext: Record<string, string>,
+): Promise<void> {
+  if (isLazyTranslating || lazyQueue.length === 0) return;
+  isLazyTranslating = true;
+
+  try {
+    while (lazyQueue.length > 0) {
+      const batch = lazyQueue.splice(0, 10);
+      await translateBatch(batch, batchMessageType, articleContext);
+      for (const seg of batch) {
+        lazyPendingIds.delete(seg.segmentId);
+        lazyCompletedIds.add(seg.segmentId);
+      }
+    }
+  } finally {
+    isLazyTranslating = false;
   }
 }
 
